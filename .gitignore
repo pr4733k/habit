@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.daily-data/
+.env*
+daily-config.php
+*.sqlite*
+*.log

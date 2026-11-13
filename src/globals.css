@@ -1,0 +1,28 @@
+:root {
+  color-scheme: light;
+  --page-bg: #fff;
+  --text-primary: #202020;
+  --text-body: #404040;
+  --text-secondary: #737373;
+  --rule: #ececec;
+  --badge-bg: #f5f5f5;
+  --badge-border: #e7e7e7;
+  --badge-hover-border: #d9d9d9;
+  --row-hover-bg: #fafafa;
+  --accent: #356df3;
+  --accent-hover: #2458d6;
+  --link-underline: #b8b8b8;
+  --font-pixel: Consolas, 'Liberation Mono', monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--page-bg); }
+body { margin: 0; color: var(--text-body); font-family: 'Inter Variable', Inter, Arial, sans-serif; }
+h1, h2, h3, h4, p, dl, dd, ul, ol { margin: 0; }
+ul, ol { padding: 0; list-style: none; }
+button, input, select, textarea { font: inherit; }
+a { color: inherit; }
+.section-label { color: var(--text-secondary); font-family: var(--font-pixel); font-size: 0.8125rem; font-weight: 400; line-height: 1.25rem; }
+.text-link { text-decoration-color: var(--link-underline); text-underline-offset: 0.25rem; }
+.text-link:hover { color: var(--accent-hover); text-decoration-color: var(--accent); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

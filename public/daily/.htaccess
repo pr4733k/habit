@@ -1,0 +1,4 @@
+RewriteEngine On
+RewriteRule ^[0-9]{4}-[0-9]{2}-[0-9]{2}\.json$ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteRule ^([0-9]{4}-[0-9]{2}-[0-9]{2})\.json$ api.php?action=day&date=$1 [L]
+RewriteRule ^api\.php$ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization},L]
