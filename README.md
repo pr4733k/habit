@@ -7,6 +7,14 @@ Write what you ate, drank, or did in one note. Habit puts your macros, water, wo
 <img src="docs/screenshots/calendar.jpg" alt="Mobile calendar with macro rings, water levels, and monthly goal counts" width="280" />
 <img src="docs/screenshots/quick-log.jpg" alt="Quick log form with a date picker and text box" width="530" />
 
+## Set up Habit with an AI tool
+
+If Git and the terminal are new to you, paste this into an AI coding tool that can run commands on your computer.
+
+```text
+Read https://github.com/pr4733k/habit/blob/main/README.md and help me run Habit on this computer. I'm new to Git and the terminal. Check which prerequisites I already have, then follow the local setup steps and run the commands you can. If I need to click something or install a prerequisite, give me one step at a time. Have me enter my Habit password locally and keep it out of the chat. Verify that the calendar and quick log open, then give me their links and tell me how to start Habit again later. Keep this on my computer and skip Android setup.
+```
+
 ## Run it locally
 
 Use Node.js 20 (20.19 or later) or 22.12+, npm, and PHP 8.2+ with PDO SQLite enabled.
@@ -49,4 +57,18 @@ Generate a password hash with `php -r 'echo password_hash(getenv("DAILY_LOG_PASS
 
 The calendar and quick log require the password by default. Set `public_calendar` to `true` if you want anyone with the link to see your processed entries. Raw notes stay behind the password.
 
-The code is available under the [MIT license](LICENSE). The screenshots show the live demo.
+## Android widget (optional)
+
+The widget shows today’s macros, water, and recent entries. **Add a note** opens a text box. Notes use the same processing queue as the web form. Tap the refresh icon for an update, or wait for Android’s background refresh.
+
+1. On Android 8 or later, download [Habit.apk from GitHub Releases](https://github.com/pr4733k/habit/releases/latest/download/Habit.apk) and open it. If Android asks, allow the app that opened the APK to install it.
+2. Open **Habit** and enter your own Habit site’s HTTPS address and the password you use at `/log`. The phone needs to be able to reach that address. A site running at `127.0.0.1` on your computer is only available on that computer.
+3. Touch and hold an empty spot on your home screen, choose **Widgets → Habit**, and drag the widget into place. To change sites, open Habit again and connect with the new address and password.
+
+If you want help with the widget, paste this separate prompt into your AI tool.
+
+```text
+I already have Habit and want the optional Android widget. Read the Android section at https://github.com/pr4733k/habit#android-widget-optional. Help me find the APK on the official GitHub release, install it, and add the widget. Check that my phone can open my own Habit site over HTTPS. If my install is only on localhost, explain what I need to do to make it reachable and ask before changing my hosting or network settings. Let me type the site password on the phone. Walk me through refreshing the widget and saving a note.
+```
+
+See [the Android build instructions](android/README.md) to build the widget from source. The code is available under the [MIT license](LICENSE). The screenshots show the live demo.

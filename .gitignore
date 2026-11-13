@@ -5,3 +5,13 @@ dist/
 daily-config.php
 *.sqlite*
 *.log
+/android/.gradle/
+/android/.kotlin/
+/android/local.properties
+/android/**/build/
+/android/.idea/
+/android/.signing/
+*.jks
+*.keystore
+*.p12
+*.apk
