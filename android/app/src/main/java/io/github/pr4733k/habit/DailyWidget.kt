@@ -22,10 +22,13 @@ import androidx.glance.GlanceModifier
 import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
+import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.LinearProgressIndicator
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
 import androidx.glance.appwidget.action.actionStartActivity
@@ -74,6 +77,12 @@ class DailyWidgetReceiver : GlanceAppWidgetReceiver() {
     }
 }
 
+class AddWaterAction : ActionCallback {
+    override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
+        DailyRefresh.addWater(context)
+    }
+}
+
 class RefreshDailyWidget : ActionCallback {
     override suspend fun onAction(context: Context, glanceId: GlanceId, parameters: ActionParameters) {
         DailyRefresh.now(context, userRequested = true)
@@ -81,6 +90,8 @@ class RefreshDailyWidget : ActionCallback {
 }
 
 internal class DailyWidget : GlanceAppWidget() {
+    override val sizeMode = SizeMode.Exact
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val cache = DailyCache(context)
         provideContent {
@@ -94,77 +105,122 @@ internal class DailyWidget : GlanceAppWidget() {
 private fun DailyWidgetContent(day: DailyCache.State) {
     val date = day.date
     val summary = day.summary
+    val compact = LocalSize.current.height < 184.dp
     val context = LocalContext.current
     val setup = Intent(context, SetupActivity::class.java)
     val dayLink = if (day.signedIn && day.origin != null) {
         Intent(Intent.ACTION_VIEW, Uri.parse("${day.origin}/daily/?date=$date"))
     } else setup
     val quickLog = if (day.signedIn) Intent(context, QuickLogActivity::class.java) else setup
-    Column(
-        GlanceModifier.fillMaxSize().background(Color(0xFFFFFFFF)).cornerRadius(18.dp).padding(9.dp),
-    ) {
+    val waterAction = if (day.signedIn) actionRunCallback<AddWaterAction>() else actionStartActivity(setup)
+    val pad = if (compact) 6.dp else 9.dp
+    val gap = if (compact) 3.dp else 5.dp
+    Column(GlanceModifier.fillMaxSize().background(Color.White).cornerRadius(20.dp).padding(pad)) {
         Row(
             GlanceModifier.fillMaxWidth().clickable(actionStartActivity(dayLink)),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Image(ImageProvider(rings(date, summary)), "Date ${date.dayOfMonth}, macro progress", GlanceModifier.size(49.dp))
-            Column(GlanceModifier.defaultWeight().padding(start = 8.dp)) {
-                val primary = if (summary == null) {
+            val dialSize = if (compact) 39.dp else 61.dp
+            Image(ImageProvider(remember(date, summary) { rings(date, summary) }),
+                "Date ${date.dayOfMonth}, macro progress", GlanceModifier.size(dialSize))
+            if (summary == null) {
+                Text(
                     when {
                         day.origin == null -> "Connect your Habit site"
                         !day.signedIn -> "Sign in to Habit"
                         day.failed -> "Habit is unavailable"
                         else -> "Loading today…"
+                    },
+                    modifier = GlanceModifier.padding(start = 8.dp),
+                    style = TextStyle(color = ink, fontSize = 13.sp),
+                    maxLines = 1,
+                )
+            } else if (compact) {
+                Row(GlanceModifier.defaultWeight().padding(start = 7.dp)) {
+                    macroKeys.forEachIndexed { index, key ->
+                        Column(GlanceModifier.defaultWeight()) {
+                            Text(macroLabels[index], style = TextStyle(color = ColorProvider(Color(ringColors[index])), fontSize = 10.sp))
+                            Text(grams(summary.macros[key]), style = TextStyle(color = ink, fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                        }
                     }
-                } else {
-                    val totals = summary.macros
-                    "P ${grams(totals["protein"])}  C ${grams(totals["carbs"])}  F ${grams(totals["fat"])}"
                 }
-                Text(primary, style = TextStyle(color = ink, fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
-                if (summary != null) {
-                    val water = summary.waterMl?.let { liters(it.toDouble()) }
-                    val target = summary.goals["water_ml"]?.let(::liters)
-                    val waterLine = if (water == null) "Water —" else "Water $water${target?.let { " / $it" }.orEmpty()} L"
-                    Text(waterLine, style = TextStyle(color = muted, fontSize = 12.sp), maxLines = 1)
+            } else {
+                Column(GlanceModifier.defaultWeight().padding(start = 11.dp)) {
+                    macroKeys.forEachIndexed { index, key ->
+                        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(macroLabels[index], modifier = GlanceModifier.defaultWeight(),
+                                style = TextStyle(color = ColorProvider(Color(ringColors[index])), fontSize = 12.sp))
+                            val target = summary.goals[key]?.let { " / ${formatted(it, 1)} g" }.orEmpty()
+                            Text(grams(summary.macros[key]) + target, style = TextStyle(color = ink, fontSize = 13.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                        }
+                    }
                 }
             }
         }
-        if (summary != null) {
-            Spacer(GlanceModifier.height(3.dp))
-            Text(
-                summary.latest.joinToString(" · ").ifEmpty { "No food or activity logged yet" },
-                modifier = GlanceModifier.fillMaxWidth().clickable(actionStartActivity(dayLink)),
-                style = TextStyle(color = muted, fontSize = 11.sp),
-                maxLines = 1,
-            )
-        }
-        Spacer(GlanceModifier.height(5.dp))
+        Spacer(GlanceModifier.height(gap))
+        val water = summary?.waterMl
+        val goal = summary?.goals?.get("water_ml")?.takeIf { it > 0 }
+        val waterLabel = (water?.let { "${formatted(it / 1000.0, 2)} L" } ?: "—") +
+            (goal?.let { " / ${formatted(it / 1000, 2)} L" } ?: "")
+        val waterHeight = if (compact) 34.dp else 40.dp
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                if (day.signedIn) "Add a note" else "Connect Habit",
-                modifier = GlanceModifier.defaultWeight()
-                    .background(Color(0xFFEFF4FF)).cornerRadius(8.dp)
-                    .clickable(actionStartActivity(quickLog))
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-                style = TextStyle(color = ColorProvider(Color(0xFF2458D6)), fontSize = 12.sp, fontWeight = FontWeight.Medium),
-            )
             Box(
-                modifier = GlanceModifier.size(width = 40.dp, height = 32.dp)
-                    .cornerRadius(8.dp).clickable(actionRunCallback<RefreshDailyWidget>()),
+                GlanceModifier.defaultWeight().height(waterHeight).cornerRadius(9.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Image(ImageProvider(R.drawable.ic_refresh), "Refresh today’s logs", GlanceModifier.size(20.dp))
+                LinearProgressIndicator(
+                    progress = if (goal == null) 0f else ((water ?: 0) / goal).coerceIn(0.0, 1.0).toFloat(),
+                    modifier = GlanceModifier.fillMaxSize(),
+                    color = ColorProvider(Color(0xFFD9E8FF)),
+                    backgroundColor = ColorProvider(Color(0xFFF1F5FD)),
+                )
+                Row(GlanceModifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Water", modifier = GlanceModifier.defaultWeight(), style = TextStyle(color = blue, fontSize = 12.sp))
+                    Text(waterLabel, style = TextStyle(color = blue, fontSize = 12.sp, fontWeight = FontWeight.Medium), maxLines = 1)
+                }
+            }
+            Box(GlanceModifier.padding(start = 4.dp).size(44.dp, waterHeight).cornerRadius(9.dp)
+                .background(Color(0xFFEAF1FF)).clickable(waterAction), contentAlignment = Alignment.Center) {
+                Image(ImageProvider(R.drawable.ic_plus), "Add 100 milliliters of water", GlanceModifier.size(20.dp))
+            }
+        }
+        val pending = (summary?.pendingCount ?: 0) > 0
+        val detail = when {
+            day.failed && summary != null -> "Couldn’t refresh · Tap ↻"
+            pending -> "Saved · Waiting for sync"
+            !compact -> summary?.latest?.joinToString(" · ")?.takeIf { it.isNotEmpty() }
+            else -> null
+        }
+        if (detail != null && (!compact || LocalSize.current.height >= 141.dp)) {
+            Spacer(GlanceModifier.height(gap))
+            Text(detail, modifier = GlanceModifier.fillMaxWidth().clickable(actionStartActivity(dayLink)),
+                style = TextStyle(color = muted, fontSize = 11.sp), maxLines = 1)
+        }
+        Spacer(GlanceModifier.defaultWeight())
+        Spacer(GlanceModifier.height(gap))
+        Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            val buttonHeight = if (compact) 30.dp else 36.dp
+            Box(GlanceModifier.defaultWeight().height(buttonHeight).cornerRadius(9.dp)
+                .background(Color(0xFFEAF1FF)).clickable(actionStartActivity(quickLog)), contentAlignment = Alignment.Center) {
+                Text(if (day.signedIn) "Add a note" else "Connect Habit",
+                    style = TextStyle(color = blue, fontSize = 12.sp, fontWeight = FontWeight.Medium))
+            }
+            Box(GlanceModifier.padding(start = 4.dp).size(44.dp, buttonHeight).cornerRadius(9.dp)
+                .background(Color(0xFFF1F5FD)).clickable(actionRunCallback<RefreshDailyWidget>()), contentAlignment = Alignment.Center) {
+                Image(ImageProvider(R.drawable.ic_refresh), "Refresh today’s logs", GlanceModifier.size(18.dp))
             }
         }
     }
 }
 
+private val macroLabels = listOf("Protein", "Carbs", "Fat")
+private val blue = ColorProvider(Color(0xFF2454B0))
+
 private val ink = ColorProvider(Color(0xFF202020))
 private val muted = ColorProvider(Color(0xFF595959))
 private val ringColors = intArrayOf(0xff8550cf.toInt(), 0xffce7423.toInt(), 0xff168367.toInt())
 
-private fun grams(value: Double?) = value?.let { "${formatted(it, 1)}g" } ?: "—"
-private fun liters(value: Double) = formatted(value / 1000, 2)
+private fun grams(value: Double?) = value?.let { "${formatted(it, 1)} g" } ?: "—"
 private fun formatted(value: Double, digits: Int): String =
     NumberFormat.getNumberInstance(Locale.ENGLISH).apply { maximumFractionDigits = digits }.format(value)
 

@@ -61,7 +61,9 @@ The calendar and quick log require the password by default. Set `public_calendar
 
 ## Android widget (optional)
 
-The widget shows today’s macros, water, and recent entries. **Add a note** opens a text box. Notes use the same processing queue as the web form. Tap the refresh icon for an update, or wait for Android’s background refresh.
+The widget shows today’s macros, water, and recent entries. Tap **+** beside Water to log 100 mL directly. **Add a note** opens a text box and uses the same processing queue as the web form. The widget checks again after a pending note is saved. You can also tap the refresh icon.
+
+If you already host Habit, rebuild and deploy the latest code to enable the water button.
 
 1. On Android 8 or later, download [Habit.apk from GitHub Releases](https://github.com/pr4733k/habit/releases/latest/download/Habit.apk) and open it. If Android asks, allow the app that opened the APK to install it.
 2. Open **Habit** and enter your own Habit site’s HTTPS address and the password you use at `/log`. The phone needs to be able to reach that address. A site running at `127.0.0.1` on your computer is only available on that computer.

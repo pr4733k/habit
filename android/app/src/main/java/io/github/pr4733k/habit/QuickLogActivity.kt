@@ -180,7 +180,7 @@ class QuickLogActivity : Activity() {
                     api.save(submission, unlocked)
                 }
                 password.text.clear()
-                DailyRefresh.now(applicationContext)
+                DailyRefresh.afterSave(applicationContext, pending)
                 Toast.makeText(this@QuickLogActivity, if (pending) "Saved · Pending" else "Saved", Toast.LENGTH_SHORT).show()
                 finish()
             } catch (error: CancellationException) {

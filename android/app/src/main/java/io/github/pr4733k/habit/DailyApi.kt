@@ -30,10 +30,22 @@ internal class DailyApi(private val site: String) {
         return runCatching { ZoneId.of(value) }.getOrElse { throw IOException("This address did not return Habit settings.") }
     }
 
-    fun today(date: LocalDate, session: String): DailySummary = DailySummary.fromMonth(
-        request("month&month=${YearMonth.from(date)}", session = session).json,
-        date,
-    )
+    fun today(date: LocalDate, session: String): DailySummary {
+        try {
+            return DailySummary.fromWidget(request("widget&date=$date", session = session).json)
+        } catch (error: DailyHttpError) {
+            if (error.status != 404) throw error
+        }
+        return DailySummary.fromMonth(request("month&month=${YearMonth.from(date)}", session = session).json, date)
+    }
+
+    fun addWater(date: LocalDate, id: String, session: String) {
+        val body = JSONObject().put("date", date.toString()).put("id", id)
+        val note = request("water", body, session).json.optJSONObject("note")
+        if (note?.optString("id") != id || note.optString("date") != date.toString() || note.isNull("parsed")) {
+            throw IOException("The tracker did not confirm the water entry.")
+        }
+    }
 
     fun signIn(password: String): String {
         val response = request("login", JSONObject().put("password", password))

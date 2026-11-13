@@ -113,6 +113,32 @@ function saveNote(PDO $db, array $data, string $today): array
     return $note;
 }
 
+function addWater(PDO $db, array $data, string $today): array
+{
+    $id = noteId($data['id'] ?? null);
+    $date = logDate($data['date'] ?? null);
+    if ($date > $today) {
+        throw new DailyInput('Select a date within the tracking period.');
+    }
+    $text = '100 mL water';
+    $parsed = dailyResult(['water' => [['mode' => 'add', 'ml' => 100]]]);
+    try {
+        run($db, 'INSERT INTO daily_notes (id, log_date, raw_note, revision, created_at, parsed)
+            VALUES (?, ?, ?, 1, ?, ?)', [$id, $date, $text,
+            (new DateTimeImmutable('now', new DateTimeZone('UTC')))->format('Y-m-d H:i:s.u'),
+            json_encode($parsed, JSON_THROW_ON_ERROR)]);
+    } catch (PDOException $error) {
+        if ($error->getCode() !== '23000') {
+            throw $error;
+        }
+    }
+    $note = getNote($db, $id);
+    if ($note['date'] !== $date || $note['revision'] !== 1 || $note['text'] !== $text || $note['parsed'] !== $parsed) {
+        respond(['error' => 'This water entry has already been used.'], 409);
+    }
+    return $note;
+}
+
 function commitNote(PDO $db, array $data): array
 {
     $id = noteId($data['id'] ?? null);
@@ -439,12 +465,20 @@ try {
                 throw new DailyInput('Invalid sync operation.');
             }
             respond(syncRequest($db, $operation, $data));
+        case 'POST water':
+            respond(['note' => addWater($db, body(), $today)]);
+        case 'GET widget':
         case 'GET day':
             $date = logDate($_GET['date'] ?? null);
             if ($date > $today) {
                 respond(['error' => 'This date is outside the tracking period.'], 404);
             }
-            respond(dailySnapshot($db, $date));
+            $day = dailySnapshot($db, $date);
+            if ($action === 'widget') {
+                $day['pendingCount'] = count($day['pending']);
+                unset($day['pending']);
+            }
+            respond($day);
         case 'GET month':
             $month = $_GET['month'] ?? '';
             if (!is_string($month)) {

@@ -45,6 +45,7 @@ class DailyApiTest {
                 .addHeader("Set-Cookie", "daily_login_attempts=test; Path=/daily; HttpOnly")
                 .addHeader("Set-Cookie", "daily_log_access=$token; Path=/daily; Secure; HttpOnly; SameSite=Strict")
                 .setBody("""{"signedIn":true}"""))
+            server.enqueue(MockResponse().setResponseCode(404))
             server.enqueue(MockResponse().setBody("""{"entries":[],"goalTargets":[]}"""))
             repeat(2) { server.enqueue(MockResponse().setBody(receipt.toString())) }
             val api = DailyApi(server.url("/").toString().trimEnd('/'))
@@ -60,6 +61,9 @@ class DailyApiTest {
             assertEquals("local-test-password", JSONObject(login.body.readUtf8()).getString("password"))
 
             assertEquals(day, api.today(day, token).date)
+            val widget = server.takeRequest()
+            assertEquals("/daily/api.php?action=widget&date=2024-04-12", widget.path)
+            assertEquals("daily_log_access=$token", widget.getHeader("Cookie"))
             val month = server.takeRequest()
             assertEquals("GET", month.method)
             assertEquals("/daily/api.php?action=month&month=2024-04", month.path)

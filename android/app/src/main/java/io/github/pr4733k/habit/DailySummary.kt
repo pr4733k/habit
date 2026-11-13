@@ -12,6 +12,7 @@ internal data class DailySummary(
     val goals: Map<String, Double>,
     val waterMl: Int?,
     val latest: List<String>,
+    val pendingCount: Int = 0,
 ) {
     fun toJson() = JSONObject().apply {
         put("date", date.toString())
@@ -19,6 +20,7 @@ internal data class DailySummary(
         put("goals", JSONObject(goals))
         put("waterMl", waterMl ?: JSONObject.NULL)
         put("latest", JSONArray(latest))
+        put("pendingCount", pendingCount)
     }
 
     companion object {
@@ -30,6 +32,19 @@ internal data class DailySummary(
             latest = json.optJSONArray("latest")?.let { values ->
                 (0 until values.length()).map(values::getString)
             }.orEmpty(),
+            pendingCount = json.optInt("pendingCount"),
+        )
+
+        fun fromWidget(json: JSONObject) = DailySummary(
+            date = LocalDate.parse(json.getString("date")),
+            macros = numbers(json.optJSONObject("totals"), macroKeys),
+            goals = numbers(json.optJSONObject("goals"), macroKeys + "water_ml"),
+            waterMl = json.optInt("waterMl", -1).takeIf { it >= 0 },
+            latest = listOf("meals", "alcohol", "workouts", "study")
+                .flatMap { json.optJSONArray(it).objects() }
+                .map { it.optString("name").trim() }.filter(String::isNotEmpty)
+                .asReversed().distinct().take(2),
+            pendingCount = json.optInt("pendingCount"),
         )
 
         fun fromMonth(month: JSONObject, date: LocalDate): DailySummary {

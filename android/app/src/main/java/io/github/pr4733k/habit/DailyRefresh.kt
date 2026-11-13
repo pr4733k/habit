@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
 import androidx.glance.appwidget.updateAll
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -14,6 +15,7 @@ import androidx.work.OutOfQuotaPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import androidx.work.workDataOf
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
@@ -24,6 +26,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.IOException
 import java.time.LocalDate
+import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 internal class DailyCache(context: Context) {
@@ -68,12 +71,12 @@ internal class DailyCache(context: Context) {
     }
 }
 
+private val refreshLock = Mutex()
+
 class DailyRefreshWorker(context: Context, parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
-    private companion object {
-        val refreshLock = Mutex()
-    }
 
     override suspend fun doWork(): Result = refreshLock.withLock {
+        val followUp = inputData.getBoolean("follow_up", false)
         val session = LogSession(applicationContext)
         val connection = session.connection() ?: return@withLock Result.success()
         val cookie = withContext(Dispatchers.IO) { session.read(connection) }
@@ -85,8 +88,9 @@ class DailyRefreshWorker(context: Context, parameters: WorkerParameters) : Corou
         val day = connection.today()
         val cache = DailyCache(applicationContext)
         val updated = try {
-            cache.save(connection, withContext(Dispatchers.IO) { DailyApi(connection.origin).today(day, cookie) })
-            true
+            val summary = withContext(Dispatchers.IO) { DailyApi(connection.origin).today(day, cookie) }
+            cache.save(connection, summary)
+            !followUp || summary.pendingCount == 0
         } catch (error: IOException) {
             if (error is DailyHttpError && error.status == 401) {
                 session.clear(connection)
@@ -97,13 +101,53 @@ class DailyRefreshWorker(context: Context, parameters: WorkerParameters) : Corou
             }
         }
         DailyWidget().updateAll(applicationContext)
-        if (updated) Result.success() else Result.retry()
+        if (updated || (followUp && runAttemptCount >= 5)) Result.success() else Result.retry()
+    }
+}
+
+class AddWaterWorker(context: Context, parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
+    override suspend fun doWork(): Result = refreshLock.withLock {
+        val context = applicationContext
+        val date = inputData.getString("date")?.let(LocalDate::parse) ?: return@withLock Result.failure()
+        val id = inputData.getString("note_id") ?: return@withLock Result.failure()
+        val session = LogSession(context)
+        val connection = session.connection()?.takeIf { it.id == inputData.getString("connection") }
+            ?: return@withLock Result.failure()
+        val cookie = withContext(Dispatchers.IO) { session.read(connection) }
+        if (cookie == null) {
+            DailyWidget().updateAll(context)
+            return@withLock Result.failure()
+        }
+        val cache = DailyCache(context)
+        val api = DailyApi(connection.origin)
+        try {
+            withContext(Dispatchers.IO) { api.addWater(date, id, cookie) }
+        } catch (error: DailyHttpError) {
+            if (error.status == 401) session.clear(connection)
+            if (error.status in 400..499 && error.status !in listOf(408, 429)) {
+                cache.fail(connection, date)
+                DailyWidget().updateAll(context)
+                return@withLock Result.failure()
+            }
+            return@withLock Result.retry()
+        } catch (_: IOException) {
+            return@withLock Result.retry()
+        }
+        try {
+            val summary = withContext(Dispatchers.IO) { api.today(connection.today(), cookie) }
+            cache.save(connection, summary)
+            DailyWidget().updateAll(context)
+        } catch (_: IOException) {
+            DailyRefresh.now(context, userRequested = true)
+        }
+        Result.success()
     }
 }
 
 internal object DailyRefresh {
     private const val periodic = "daily-widget-periodic"
     private const val immediate = "daily-widget-immediate"
+    private const val followUp = "daily-widget-follow-up"
     private val connected = Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
     fun start(context: Context) {
@@ -124,8 +168,33 @@ internal object DailyRefresh {
         WorkManager.getInstance(context).enqueueUniqueWork(immediate, policy, work.build())
     }
 
+    fun afterSave(context: Context, pending: Boolean) {
+        now(context, userRequested = true)
+        if (!pending) return
+        val work = OneTimeWorkRequestBuilder<DailyRefreshWorker>()
+            .setInputData(workDataOf("follow_up" to true))
+            .setConstraints(connected)
+            .setInitialDelay(8, TimeUnit.SECONDS)
+            .setBackoffCriteria(BackoffPolicy.LINEAR, 10, TimeUnit.SECONDS)
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(followUp, ExistingWorkPolicy.REPLACE, work)
+    }
+
+    suspend fun addWater(context: Context) {
+        val connection = LogSession(context).connection() ?: return
+        val data = workDataOf("date" to connection.today().toString(), "note_id" to UUID.randomUUID().toString(),
+            "connection" to connection.id)
+        val work = OneTimeWorkRequestBuilder<AddWaterWorker>()
+            .setInputData(data).setConstraints(connected)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            work.setExpedited(OutOfQuotaPolicy.RUN_AS_NON_EXPEDITED_WORK_REQUEST)
+        }
+        withContext(Dispatchers.IO) { WorkManager.getInstance(context).enqueue(work.build()).result.get() }
+    }
+
     fun stop(context: Context) {
         WorkManager.getInstance(context).cancelUniqueWork(periodic)
         WorkManager.getInstance(context).cancelUniqueWork(immediate)
+        WorkManager.getInstance(context).cancelUniqueWork(followUp)
     }
 }
