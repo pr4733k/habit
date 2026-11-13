@@ -11,9 +11,11 @@ Write what you ate, drank, or did in one note. Habit puts your macros, water, wo
 
 If Git and the terminal are new to you, paste this into an AI coding tool that can run commands on your computer.
 
-```text
-Read https://github.com/pr4733k/habit/blob/main/README.md and help me run Habit on this computer. I'm new to Git and the terminal. Check which prerequisites I already have, then follow the local setup steps and run the commands you can. If I need to click something or install a prerequisite, give me one step at a time. Have me enter my Habit password locally and keep it out of the chat. Verify that the calendar and quick log open, then give me their links and tell me how to start Habit again later. Keep this on my computer and skip Android setup.
-```
+> Read https://github.com/pr4733k/habit/blob/main/README.md and help me run Habit on this computer. I’m new to Git and the terminal.
+>
+> Check what’s already installed, then follow the local setup steps. Run the commands you can. If I need to do something myself, give me one step at a time. Let me enter my password on this computer and keep it out of the chat.
+>
+> Check that the calendar and quick log open. Give me their links and tell me how to start Habit again later. Keep the setup local and skip Android.
 
 ## Run it locally
 
@@ -67,8 +69,10 @@ The widget shows today’s macros, water, and recent entries. **Add a note** ope
 
 If you want help with the widget, paste this separate prompt into your AI tool.
 
-```text
-I already have Habit and want the optional Android widget. Read the Android section at https://github.com/pr4733k/habit#android-widget-optional. Help me find the APK on the official GitHub release, install it, and add the widget. Check that my phone can open my own Habit site over HTTPS. If my install is only on localhost, explain what I need to do to make it reachable and ask before changing my hosting or network settings. Let me type the site password on the phone. Walk me through refreshing the widget and saving a note.
-```
+> I already have Habit and want to add the Android widget. Read https://github.com/pr4733k/habit#android-widget-optional and show me where to download the APK and how to add the widget.
+>
+> Help me check that my phone can open my Habit site over HTTPS. If Habit only runs on localhost, explain how I can make it reachable and ask before changing my hosting or network settings.
+>
+> Let me enter my password on the phone. Show me how to refresh the widget and save a note.
 
 See [the Android build instructions](android/README.md) to build the widget from source. The code is available under the [MIT license](LICENSE). The screenshots show the live demo.
