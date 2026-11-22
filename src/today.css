@@ -43,6 +43,13 @@
 .habit-today-food .daily-detail-group ul { list-style: none; padding: 0; }
 .habit-spinning { animation: habit-spin 1s linear infinite; }
 @keyframes habit-spin { to { transform: rotate(360deg); } }
+.habit-today .daily-food-row { align-items: start; padding-block: .625rem; }
+.habit-today .daily-detail-row > .daily-food-nutrition { flex: none; display: grid; gap: .25rem; justify-items: end; }
+.habit-today .daily-food-calories { color: var(--text-secondary); font-size: .75rem; }
+.habit-today .daily-food-macros { display: flex; flex-wrap: wrap; gap: .25rem; margin: 0; }
+.habit-today .daily-food-macros div { min-width: 3.25rem; padding: .1875rem .375rem; border-radius: .375rem; background: color-mix(in srgb, var(--macro-color) 14%, var(--page-bg)); font-size: .6875rem; font-variant-numeric: tabular-nums; }
+.habit-today .daily-food-macros dt { color: var(--text-body); }
+.habit-today .daily-food-macros dd { margin: 0; color: var(--text-primary); font-weight: 600; }
 @media (max-width: 540px) {
   .habit-today-summary { gap: 19px; padding-top: 23px; }
   .habit-today-date { width: 112px; height: 132px; flex-basis: 112px; border-radius: 18px; }
