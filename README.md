@@ -5,6 +5,7 @@ Write what you ate, drank, or did in one note. Habit puts your macros, water, wo
 [Live demo at prateekm.com/daily](https://prateekm.com/daily)
 
 <img src="docs/screenshots/calendar.jpg" alt="Mobile calendar with macro rings, water levels, and monthly goal counts" width="280" />
+<img src="docs/screenshots/today.jpg" alt="Today’s macro rings, water progress, meals and a saved workout suggestion" width="280" />
 <img src="docs/screenshots/quick-log.jpg" alt="Quick log form with a date picker and text box" width="530" />
 
 ## Set up Habit with an AI tool
@@ -15,11 +16,11 @@ If Git and the terminal are new to you, paste this into an AI coding tool that c
 >
 > Check what’s already installed, then follow the local setup steps. Run the commands you can. If I need to do something myself, give me one step at a time. Let me enter my password on this computer and keep it out of the chat.
 >
-> Check that the calendar and quick log open. Give me their links and tell me how to start Habit again later. Keep the setup local and skip Android.
+> Help me configure a dedicated OpenRouter key in the private configuration file without printing or sending it in chat. Use a $5 monthly spending limit. Check that a note processes automatically and that the calendar and quick log open. Give me their links and tell me how to start Habit again later. Keep the setup local and skip Android.
 
 ## Run it locally
 
-Use Node.js 20 (20.19 or later) or 22.12+, npm, and PHP 8.2+ with PDO SQLite enabled.
+Use Node.js 20 (20.19 or later) or 22.12+, npm, and PHP 8.2+ with PDO SQLite, cURL and mbstring enabled.
 
 ```sh
 git clone https://github.com/pr4733k/habit.git
@@ -37,17 +38,19 @@ In PowerShell, set `$env:DAILY_LOG_PASSWORD` and, if you want, `$env:DAILY_TIMEZ
 
 Run `npm run api` in one terminal and `npm run dev` in another. Open [the calendar](http://127.0.0.1:5173/daily) or [quick log](http://127.0.0.1:5173/log). Set your targets under **Daily goals**. A change takes effect today and keeps the goals attached to earlier dates.
 
-## Sync notes
+## Process notes automatically
 
-New notes stay pending until a processor saves their structured entries. To process them with Codex, open a chat in the Habit checkout and ask it to follow [the note processing steps](daily/processor.md). You can also supply the JSON yourself.
+OpenRouter is the recommended processor. Add a dedicated API key to the ignored .daily-data/config.php file, set processor to openrouter, and keep the key out of chat and Git. Use a $5 monthly key limit. Install PHP cURL and mbstring as well as PDO. The default model is google/gemini-3.8-flash.
 
-For automatic sync, set `auto_sync` to `true` in `.daily-data/config.php` or your hosted config. With a Codex executable that supports `codex queue`, run:
+Notes save immediately. The server calculates their entries in the background, and the log shows Logged when processing finishes. Water-button taps and clear water-only notes do not use AI. If a note fails after three attempts, use Retry beside it. Use Edit to correct an earlier note.
 
-```sh
-node scripts/daily-bridge.mjs /path/to/codex YOUR_HABIT_CHAT_UUID
-```
+On hosted installs, schedule the recovery worker every minute. See [OpenRouter setup](daily/openrouter.md) for configuration, the worker command and food references. Existing installs keep their current processing mode until you change it.
 
-Use a chat opened in this checkout and keep the bridge and Codex running. The bridge queues a message when a note is saved. The note stays pending if your computer is offline.
+The /today page on your install shows the day’s entries and a saved workout suggestion. Unlock your log to see Generate workout. Configure your training goals, available time and recurring sessions before using suggestions. A suggestion never counts as a completed workout.
+
+### Codex or your own processor (optional)
+
+Set processor to external and follow [the note processing steps](daily/processor.md). The existing pending and commit API remains available. For the optional PC bridge, enable auto_sync and run node scripts/daily-bridge.mjs /path/to/codex YOUR_HABIT_CHAT_UUID. Keep the bridge and Codex open. This mode needs your computer; OpenRouter mode does not.
 
 ## Host it
 

@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/_training.php';
 
 function dailyText(mixed $value, int $limit): string
 {
@@ -71,11 +72,55 @@ function dailyWorkout(array $item): array
         foreach (['distance_m' => 2500000, 'duration_s' => 604800, 'pace_s_per_km' => 43200, 'avg_hr_bpm' => 260] as $key => $max) {
             $workout[$key] = isset($item[$key]) ? dailyNumber($item[$key], $max) : null;
         }
+    } elseif ($workout['type'] === 'gym' && isset($item['duration_s'])) {
+        $workout['duration_s'] = dailyNumber($item['duration_s'], 86400, true);
     }
-    return $workout;
+    return $workout + dailyTrainingExtras($item);
 }
 
-function dailyResult(mixed $result): array
+function dailyLiftingEnergy(array $entries, array $settings): array
+{
+    $bodyWeightKg = $settings['body_weight_kg'] ?? null;
+    if (!is_numeric($bodyWeightKg) || $bodyWeightKg <= 0) {
+        return [];
+    }
+    $durations = [];
+    foreach ($entries as $entry) {
+        foreach ($entry['parsed']['workouts'] as $workout) {
+            if ($workout['type'] === 'gym') {
+                $date = $entry['date'];
+                $durations[$date] = ($durations[$date] ?? 0) + ($workout['duration_s'] ?? 0);
+            }
+        }
+    }
+    $defaultMinutes = $settings['default_minutes'] ?? 0;
+    $estimates = [];
+    foreach ($durations as $date => $duration) {
+        $assumedDuration = $duration <= 0;
+        $minutes = $assumedDuration ? $defaultMinutes : $duration / 60;
+        if (is_numeric($minutes) && $minutes > 0) {
+            // The Adult Compendium lists general resistance training at 3.5 MET.
+            $activeKcal = (3.5 - 1.0) * 3.5 * $bodyWeightKg * $minutes / 200;
+            $estimates[$date] = ['kcal' => round($activeKcal / 5) * 5, 'minutes' => $minutes,
+                'assumedDuration' => $assumedDuration];
+        }
+    }
+    return $estimates;
+}
+
+function dailyDefaultMeal(string $createdAt): string
+{
+    $loggedAt = new DateTimeImmutable($createdAt, new DateTimeZone('UTC'));
+    $hour = (int)$loggedAt->setTimezone(new DateTimeZone($GLOBALS['config']['timezone'] ?? 'Asia/Kolkata'))->format('G');
+    return match (true) {
+        $hour < 13 => 'Breakfast',
+        $hour < 16 => 'Lunch',
+        $hour < 19 => 'Snack',
+        default => 'Dinner',
+    };
+}
+
+function dailyResult(mixed $result, string $defaultMeal = 'Other'): array
 {
     if (!is_array($result)) {
         throw new DailyInput('Supply a parsed result.');
@@ -87,7 +132,7 @@ function dailyResult(mixed $result): array
     ];
     $parsed = [
         'meals' => dailyItems($result['meals'] ?? [], static fn($item) => $intake($item) + [
-            'meal' => dailyChoice($item['meal'] ?? 'Other', ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Other']),
+            'meal' => dailyChoice($item['meal'] ?? $defaultMeal, ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Other']),
         ]),
         'workouts' => dailyItems($result['workouts'] ?? [], 'dailyWorkout'),
         'water' => dailyItems($result['water'] ?? [], static fn($item) => [
@@ -101,6 +146,12 @@ function dailyResult(mixed $result): array
         ]),
         'review' => dailyOptionalText($result['review'] ?? null, 600),
     ];
+    if (array_key_exists('rest', $result)) {
+        if (!is_bool($result['rest'])) throw new DailyInput('Rest must be true or false.');
+        $parsed['rest'] = $result['rest'];
+    }
+    if (isset($result['recovery'])) $parsed['recovery'] = dailyItems($result['recovery'], 'dailyRecovery');
+    if (isset($result['planned_sessions'])) $parsed['planned_sessions'] = dailyItems($result['planned_sessions'], 'dailyPlannedSession');
     if (!array_filter($parsed)) {
         throw new DailyInput('Record a parsed item or a reason the note needs review.');
     }

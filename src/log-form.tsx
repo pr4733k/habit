@@ -16,7 +16,8 @@ const syncMessages: Record<SyncState, string> = {
   failed: 'Pending · Sync didn’t finish. Try again or check Codex.',
 };
 
-export function LogForm({ timeZone, autoSync }: { timeZone: string; autoSync: boolean }) {
+export function LogForm({ timeZone, autoSync, processor }: { timeZone: string; autoSync: boolean; processor?: string }) {
+  const externalSync = autoSync && processor !== 'openrouter';
   const [mode, setMode] = useState<DateMode>('today');
   const [customDate, setCustomDate] = useState('');
   const [text, setText] = useState('');
@@ -37,13 +38,13 @@ export function LogForm({ timeZone, autoSync }: { timeZone: string; autoSync: bo
   const syncComplete = syncState === 'complete';
 
   useEffect(() => {
-    if (!autoSync) return;
+    if (!externalSync) return;
     let active = true;
     api<{ state: SyncState }>('sync').then(({ state }) => {
       if (active) setSyncState(current => current === 'idle' ? state : current);
     }).catch(() => {});
     return () => { active = false; };
-  }, [autoSync]);
+  }, [externalSync]);
 
   useEffect(() => {
     if (!syncing) return;
@@ -88,6 +89,37 @@ export function LogForm({ timeZone, autoSync }: { timeZone: string; autoSync: bo
     }
     return () => { active = false; };
   }, [date, saved, syncComplete]);
+
+  const waiting = dayNotes.some(note => !note.parsed && note.processing?.state !== 'failed');
+  useEffect(() => {
+    if (!waiting || !date) return;
+    let active = true;
+    const started = Date.now();
+    let lastRefresh = 0;
+    const timer = window.setInterval(async () => {
+      if (document.hidden) return;
+      const now = Date.now();
+      if (now - started > 600000) { window.clearInterval(timer); return; }
+      if (now - started > 30000 && now - lastRefresh < 10000) return;
+      lastRefresh = now;
+      try {
+        const { notes } = await api<{ notes: Note[] }>('notes', { date });
+        if (!active) return;
+        setDayNotes(notes);
+        setSaved(previous => previous ? notes.find(n => n.id === previous.id) ?? previous : previous);
+      } catch { /* Preserve the saved receipt if a refresh fails. */ }
+    }, 2500);
+    return () => { active = false; window.clearInterval(timer); };
+  }, [waiting, date]);
+
+  async function retry(note: Note) {
+    setBusy(true); setError('');
+    try {
+      const result = await api<{ note: Note }>('retry-note', {}, { id: note.id });
+      setSaved(result.note);
+    } catch (error) { setError((error as Error).message); }
+    finally { setBusy(false); }
+  }
 
   async function save(event: FormEvent) {
     event.preventDefault();
@@ -167,7 +199,7 @@ export function LogForm({ timeZone, autoSync }: { timeZone: string; autoSync: bo
         {editing && <a className="text-link" href={`/log?date=${date}`}>New note</a>}
         {saved && <div className="daily-receipt" role="status">
           {saved.parsed || syncComplete ? <Check aria-hidden="true" /> : <Clock3 aria-hidden="true" />}
-          <span>{syncComplete ? 'Synced' : !autoSync && !saved.parsed ? 'Saved · Pending' : 'Saved'}</span>
+          <span>{processor === 'openrouter' ? noteStatus(saved) : syncComplete ? 'Synced' : !autoSync && !saved.parsed ? 'Saved · Pending' : 'Saved'}</span>
           <a className="text-link" href={`/daily?date=${saved.date}`}>View day</a>
         </div>}
       </div>
@@ -183,16 +215,25 @@ export function LogForm({ timeZone, autoSync }: { timeZone: string; autoSync: bo
         <p>{note.text}</p>
         <div>
           <span data-pending={!note.parsed || !!note.parsed.review || undefined}>
-            {!note.parsed ? (syncing && syncState !== 'waiting' ? 'Syncing…' : 'Pending') : note.parsed.review ? 'Needs review' : 'Processed'}
+            {note.parsed?.review ? 'Needs review' : processor === 'openrouter' ? noteStatus(note) : !note.parsed ? (syncing && syncState !== 'waiting' ? 'Syncing…' : 'Pending') : 'Processed'}
           </span>
           <a className="text-link" href={`/log?id=${note.id}`}>Edit</a>
+          {!note.parsed && note.processing?.state === 'failed' && <button className="text-link daily-retry" disabled={busy} onClick={() => retry(note)}>Retry</button>}
         </div>
+        {note.processing?.error && !note.parsed && <p className="daily-muted">{note.processing.error}</p>}
         {note.parsed?.review && <p className="daily-muted">{note.parsed.review}</p>}
       </li>)}</ul>
     </details>}
     <LogGoals />
     </>
   );
+}
+
+function noteStatus(note: Note) {
+  if (note.parsed) return 'Logged';
+  if (note.processing?.state === 'failed') return 'Needs attention';
+  if (note.processing && (note.processing.attempts ?? 0) > 0 && note.processing.state === 'queued') return 'Saved · Retry scheduled';
+  return note.processing ? 'Saved · Processing' : 'Saved · Pending';
 }
 
 const goalFields = [...macroKeys, 'water_ml'] as const;

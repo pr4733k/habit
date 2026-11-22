@@ -25,7 +25,7 @@ export type Parsed = {
   study: { name: string; minutes: number | null }[];
   review: string | null;
 };
-export type Note = { id: string; date: string; text: string; revision: number; parsed: Parsed | null };
+export type Note = { id: string; date: string; text: string; revision: number; parsed: Parsed | null; processing?: { state: string; attempts?: number; error: string | null } };
 export type CalendarEntry = { date: string; parsed: Omit<Parsed, 'review'> };
 export type Month = { entries: CalendarEntry[]; goalTargets: GoalTarget[]; startDate: string };
 

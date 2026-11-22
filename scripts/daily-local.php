@@ -35,6 +35,11 @@ if (!is_file($configPath)) {
         'session_key' => bin2hex(random_bytes(32)),
         'timezone' => $timeZone === false ? 'UTC' : $timeZone,
         'local' => true,
+        'public_calendar' => false,
+        'processor' => 'openrouter',
+        'openrouter_api_key' => getenv('OPENROUTER_API_KEY') ?: '',
+        'openrouter_model' => 'google/gemini-3.8-flash',
+        'openrouter_monthly_budget' => 5,
     ];
     file_put_contents($directory . '/processor.json', json_encode([
         'url' => 'http://127.0.0.1:8877/daily/api.php', 'token' => $token,

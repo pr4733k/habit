@@ -1,0 +1,52 @@
+:is(.daily-shell, .home-daily) {
+  --daily-protein: #8550cf;
+  --daily-carbs: #ce7423;
+  --daily-fat: #168367;
+  --daily-water: #3c80c2;
+  --daily-alcohol: #a44750;
+}
+
+:is(.daily-tile, .home-daily-art)[data-alcohol]:not(:has(.daily-wave)) {
+  background: linear-gradient(to bottom, var(--page-bg) calc(100% - 3px), #edbcc0 0);
+}
+.daily-wave {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(to bottom, var(--wave-surface, #dceeff) var(--water-line), var(--wave-bottom, #eff7ff));
+  clip-path: polygon(
+    0 var(--water-line), 10% calc(var(--water-line) - 2px), 20% calc(var(--water-line) - 3px),
+    30% calc(var(--water-line) - 2px), 40% var(--water-line), 50% calc(var(--water-line) + 2px),
+    60% calc(var(--water-line) + 3px), 70% calc(var(--water-line) + 2px),
+    80% var(--water-line), 90% calc(var(--water-line) - 2px), 100% calc(var(--water-line) - 2px),
+    100% 100%, 0 100%
+  );
+}
+[data-alcohol] > .daily-wave { --wave-surface: #f1c9cd; --wave-bottom: #fae4e6; }
+.daily-wave[data-full] { clip-path: none; }
+@media (prefers-reduced-motion: no-preference) {
+  .daily-wave:not([data-full]) { animation: daily-water-sway 4.5s ease-in-out infinite alternate; }
+}
+@keyframes daily-water-sway {
+  to {
+    clip-path: polygon(
+      0 calc(var(--water-line) - 2px), 10% calc(var(--water-line) - 1px), 20% var(--water-line),
+      30% calc(var(--water-line) + 2px), 40% calc(var(--water-line) + 3px), 50% calc(var(--water-line) + 2px),
+      60% var(--water-line), 70% calc(var(--water-line) - 2px), 80% calc(var(--water-line) - 3px),
+      90% calc(var(--water-line) - 2px), 100% var(--water-line), 100% 100%, 0 100%
+    );
+  }
+}
+
+.daily-protein { --macro-color: var(--daily-protein); }
+.daily-carbs { --macro-color: var(--daily-carbs); }
+.daily-fat { --macro-color: var(--daily-fat); }
+.daily-water { --macro-color: var(--daily-water); }
+.daily-ring {
+  position: absolute;
+  inset: calc(var(--ring-index) * var(--ring-spacing, 12.5%));
+  border-radius: 50%;
+  background: conic-gradient(var(--macro-color) var(--progress), color-mix(in srgb, var(--macro-color) 19%, transparent) 0);
+  mask-image: radial-gradient(farthest-side, transparent calc(100% - var(--ring-stroke, 0.23rem) - 0.4px), #000 calc(100% - var(--ring-stroke, 0.23rem) + 0.4px));
+}
+.daily-ring[data-full] { background: var(--macro-color); }

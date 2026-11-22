@@ -2,4 +2,4 @@ DirectoryIndex index.html
 RewriteEngine On
 
 # The tracker expects these routes at the root of its own domain or subdomain.
-RewriteRule ^(daily|log|daily/log)/?$ index.html [L]
+RewriteRule ^(daily|log|daily/log|today)/?$ index.html [L]

@@ -19,7 +19,7 @@ export function DailyShell({ view, locked, children }: { view: 'calendar' | 'log
   );
 }
 
-function LogUnlock({ children }: { children: ReactNode }) {
+export function LogUnlock({ children }: { children: ReactNode }) {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
