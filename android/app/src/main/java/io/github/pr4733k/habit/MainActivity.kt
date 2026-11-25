@@ -15,6 +15,9 @@ import kotlinx.coroutines.*
 import org.json.JSONObject
 import java.net.URI
 import java.time.LocalDate
+import java.io.File
+import android.provider.MediaStore
+import androidx.core.content.FileProvider
 
 class MainActivity : Activity() {
     private lateinit var web: WebView
@@ -24,6 +27,8 @@ class MainActivity : Activity() {
     private var first = true
     private var lastCookie: String? = null
     private lateinit var unlockButton: Button
+    private var photoCallback: ValueCallback<Array<Uri>>? = null
+    private var captureUri: Uri? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,7 +49,25 @@ class MainActivity : Activity() {
             settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
             settings.setSupportMultipleWindows(false)
             CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
-            webChromeClient = WebChromeClient()
+            webChromeClient = object : WebChromeClient() {
+                override fun onShowFileChooser(view: WebView, callback: ValueCallback<Array<Uri>>, params: FileChooserParams): Boolean {
+                    if (!trusted(view.url ?: "")) return false
+                    photoCallback?.onReceiveValue(null); photoCallback = callback
+                    val chooser = if (params.isCaptureEnabled) {
+                        val directory = File(cacheDir, "label-captures").apply { mkdirs() }
+                        captureUri = FileProvider.getUriForFile(this@MainActivity, "$packageName.label-files", File.createTempFile("label-", ".jpg", directory))
+                        Intent(MediaStore.ACTION_IMAGE_CAPTURE).putExtra(MediaStore.EXTRA_OUTPUT, captureUri)
+                            .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            .apply { clipData = android.content.ClipData.newRawUri("Nutrition label", captureUri) }
+                    } else {
+                        captureUri = null
+                        Intent(Intent.ACTION_OPEN_DOCUMENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE)
+                    }
+                    try { startActivityForResult(chooser, 410) }
+                    catch (_: android.content.ActivityNotFoundException) { photoCallback?.onReceiveValue(null); photoCallback = null; Toast.makeText(this@MainActivity, "No photo app is available", Toast.LENGTH_SHORT).show() }
+                    return true
+                }
+            }
             webViewClient = object : WebViewClient() {
                 override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
                     if (!request.isForMainFrame) return !trusted(request.url.toString())
@@ -99,6 +122,7 @@ class MainActivity : Activity() {
         uri.scheme == "https" && uri.host == base.host && uri.port == base.port && uri.rawUserInfo == null }.getOrDefault(false)
     private fun destination(intent: Intent): String {
         val date = intent.getStringExtra("date")?.let { runCatching { LocalDate.parse(it).toString() }.getOrNull() }
+        if (intent.getBooleanExtra("log", false)) return "$origin/daily/log?date=${date ?: appToday(this)}&food=${if (intent.getStringExtra("food") == "repeat") "repeat" else "label"}"
         return "$origin/daily/" + if (intent.getBooleanExtra("workout", false)) "?tab=workout" + if (intent.getBooleanExtra("start", false)) "&start=1" else ""
             else date?.let { "?date=$it" }.orEmpty()
     }
@@ -124,5 +148,12 @@ class MainActivity : Activity() {
     override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); setIntent(intent); seedCookie(); web.loadUrl(destination(intent)) }
     override fun onSaveInstanceState(outState: Bundle) { web.saveState(outState); super.onSaveInstanceState(outState) }
     @Deprecated("Activity back compatibility") override fun onBackPressed() { if (web.canGoBack()) web.goBack() else super.onBackPressed() }
-    override fun onDestroy() { scope.cancel(); if (::web.isInitialized) web.destroy(); super.onDestroy() }
+    @Deprecated("Activity result compatibility") override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != 410) return
+        val selected = if (resultCode == RESULT_OK) captureUri ?: data?.data else null
+        photoCallback?.onReceiveValue(selected?.takeIf { it.scheme == "content" }?.let { arrayOf(it) })
+        photoCallback = null; captureUri = null
+    }
+    override fun onDestroy() { scope.cancel(); photoCallback?.onReceiveValue(null); if (::web.isInitialized) web.destroy(); File(cacheDir,"label-captures").listFiles()?.forEach { it.delete() }; super.onDestroy() }
 }

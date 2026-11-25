@@ -64,6 +64,10 @@ The calendar and quick log require the password by default. Set `public_calendar
 
 ## Android widget (optional)
 
+Private logging includes **Repeat meal** above the note box and **Nutrition label** beside it. Repeating a meal reuses the same portion and macros without AI. Label photos offer camera/gallery selection, show the extracted values, and require an amount eaten before saving. Images are sent to OpenRouter and are not stored on your server. PHP GD is required for photo processing.
+
+The Workout tab, native exercise editor, and taller widget show progression cues based on completed sets. Cues never overwrite your prefilled weights or treat a planned workout as completed.
+
 The app opens your Habit website with its calendar, Workout tab, and daily logs. The widget shows macros, water, and an exercise queue when resized taller. Log the displayed previous sets in one tap, or edit weights, reps, and set groups in a native popup. Each exercise saves separately. Pending exercise saves stay on the phone and retry when connected.
 
 Tap **+** beside Water to add 100 mL without AI. **Add a note** opens a text box and uses the same processing queue as the web form. The widget refreshes after your saves; Android may delay background checks for changes made on another device. Tap the refresh icon to request an update now.

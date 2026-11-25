@@ -55,6 +55,7 @@ class ExerciseLogActivity : Activity() {
         body.addView(TextView(this).apply { text = item.getString("name"); textSize = 21f; setTextColor(Color.rgb(32,32,32)); setTypeface(null, android.graphics.Typeface.BOLD) })
         val source = item.optJSONObject("previous")?.optString("date")
         body.addView(TextView(this).apply { text = if (item.optJSONObject("saved") != null) "Saved today" else source?.let { "Last logged · $it" } ?: "Enter your sets"; textSize = 13f; setPadding(0, dp(6), 0, dp(10)) })
+        item.stringOrNull("progression")?.let { hint -> body.addView(TextView(this).apply { text = hint; textSize = 13f; setTextColor(Color.rgb(117,68,191)); setPadding(0,0,0,dp(12)) }) }
         body.addView(status)
         status.text = if (conflict) "Changed elsewhere or needs review. Saving will use the latest revision and replace the saved sets." else "Weight · Reps · Sets"
         if (item.optJSONObject("saved")?.optBoolean("external") == true) {

@@ -1,5 +1,8 @@
 'use client';
 
+import { FoodTools } from './food-tools';
+import { Camera } from 'lucide-react';
+
 import { Check, Clock3, RefreshCw } from 'lucide-react';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { api, dateLabel, macroKeys, macroLabels, previousDay, todayIn, type Goals, type Note } from './model';
@@ -21,6 +24,7 @@ export function LogForm({ timeZone, autoSync, processor }: { timeZone: string; a
   const [mode, setMode] = useState<DateMode>('today');
   const [customDate, setCustomDate] = useState('');
   const [text, setText] = useState('');
+  const [photoRequest, setPhotoRequest] = useState(0);
   const [editing, setEditing] = useState<Note | null>(null);
   const [saved, setSaved] = useState<Note | null>(null);
   const [busy, setBusy] = useState(false);
@@ -163,7 +167,7 @@ export function LogForm({ timeZone, autoSync, processor }: { timeZone: string; a
 
   return (
     <>
-    <form className="daily-log-form" onSubmit={save}>
+    <div className="daily-log-form">
       <div className="daily-form-date">
         <div>
           <label className="section-label" htmlFor="daily-date-mode">/date</label>
@@ -184,7 +188,10 @@ export function LogForm({ timeZone, autoSync, processor }: { timeZone: string; a
               onChange={event => { setCustomDate(event.target.value); setSaved(null); }} />
           : <time dateTime={date}>{dateLabel(date, { weekday: 'short', day: 'numeric', month: 'long' })}</time>}
       </div>
-      <label className="section-label" htmlFor="daily-note">/note</label>
+    </div>
+    {!editing && <FoodTools key={date} date={date} onSaved={setSaved} photoRequest={photoRequest} />}
+    <form className="daily-log-form" onSubmit={save}>
+      <div className="daily-note-heading"><label className="section-label" htmlFor="daily-note">/note</label>{!editing && <button type="button" className="text-link daily-retry" onClick={() => { setPhotoRequest(value => value + 1); document.querySelector('[aria-label="Quick food logging"]')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }}><Camera aria-hidden="true" />Nutrition label</button>}</div>
       <textarea id="daily-note" value={text} required maxLength={4000} rows={6} disabled={busy || loadFailed}
         placeholder={'Lunch: 2 rotis, dal and 500 ml water.\nGym: bench press 3 × 8 at 50 kg.'}
         onChange={event => { setText(event.target.value); setSaved(null); }} />

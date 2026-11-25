@@ -10,6 +10,10 @@ Tap **+** beside Water to add 100 mL without AI. Notes use the server’s proces
 
 ## Build from source
 
+The note composer also offers **Repeat meal** and **Scan label**. Scanning opens the private web flow with camera/gallery choices, a compact label preview, and an amount-eaten field. Photos are sent privately to OpenRouter and discarded by the server. They are not added to your public calendar. Previous saved meals reuse their original portions and estimated/label status.
+
+Progression cues appear under previous sets in the app and workout widget. They suggest a next rep target, or a small load increase after repeated completed performances above the target. Cues leave the prefilled weights and reps unchanged.
+
 Use JDK 17 and Android SDK 35. From this directory run:
 
 ```sh

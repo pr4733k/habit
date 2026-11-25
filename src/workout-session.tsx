@@ -138,6 +138,7 @@ export function WorkoutSession({ date, workouts, close }: { date: string; workou
             {exercise.previous && <div className="habit-exercise-previous"><span>Last time · {dateLabel(exercise.previous.date, { day: 'numeric', month: 'short' })}</span>
               <p>{exercise.previous.complete ? groupSummary(exercise.previous.groups) : exercise.previous.details ?? 'Set details weren’t recorded.'}</p></div>}
             {!exercise.previous && !exercise.saved && <p className="habit-exercise-no-history daily-muted">No matching previous sets.</p>}
+            {exercise.progression && !exercise.saved && <p className="habit-exercise-progression">{exercise.progression}</p>}
             {value.groups.map((group, groupIndex) => <div className="habit-exercise-group" key={groupIndex}>
               <div className="habit-exercise-load"><label><span className="sr-only">Load type, group {groupIndex + 1}</span>
                 <select disabled={pending} value={group.weight_basis === 'bodyweight' ? 'bodyweight' : `${group.weight_unit}:${group.weight_basis ?? ''}`}

@@ -42,3 +42,7 @@
 .habit-session-muscles { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--rule); }
 .habit-session-muscles > summary { cursor: pointer; min-height: 2.75rem; color: var(--text-secondary); }
 @media (max-width: 540px) { .habit-exercise-load select { font-size: 1rem; } .habit-exercise-fields { gap: 0.5rem; } }
+
+.habit-session-heading { display: flex; justify-content: space-between; align-items: start; gap: 1rem; }
+
+.habit-exercise-progression { margin: 0 0 1rem; padding-left: 0.75rem; border-left: 2px solid var(--daily-protein, #8550cf); color: var(--muted, #666); font-size: 0.8125rem; line-height: 1.6; }

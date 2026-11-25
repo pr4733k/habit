@@ -133,7 +133,7 @@ function dailyScaleNutrition(array $result, array $references): array {
     return $result;
 }
 
-function dailyAiCall(PDO $db, array $config, string $purpose, string $system, array $input, array $schema): array {
+function dailyAiCall(PDO $db, array $config, string $purpose, string $system, array $input, array $schema, ?string $image = null): array {
     $key = $config['openrouter_api_key'] ?? '';
     if (!is_string($key) || strlen($key) < 20) throw new DailyAiFailure('OpenRouter is not configured.');
     $spent = (float)run($db, 'SELECT COALESCE(SUM(cost), 0) FROM daily_ai_usage WHERE created_at >= ?', [gmdate('Y-m-01')])->fetchColumn();
@@ -144,7 +144,13 @@ function dailyAiCall(PDO $db, array $config, string $purpose, string $system, ar
     $payload = ['model' => $model, 'messages' => [['role' => 'system', 'content' => $system], ['role' => 'user', 'content' => json_encode($input, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)]],
         'provider' => $provider, 'response_format' => ['type' => 'json_schema', 'json_schema' => ['name' => 'habit_' . $purpose, 'strict' => true, 'schema' => $schema]],
         'max_tokens' => 6000, 'reasoning' => ['effort' => 'low'], 'usage' => ['include' => true]];
-    $curl = curl_init('https://openrouter.ai/api/v1/chat/completions');
+    if ($image !== null) {
+        $payload = ['model'=>$model,'instructions'=>$system,'input'=>[['role'=>'user','content'=>[
+            ['type'=>'input_text','text'=>json_encode($input,JSON_THROW_ON_ERROR)],['type'=>'input_image','image_url'=>$image]]]],
+            'text'=>['format'=>['type'=>'json_schema','name'=>'habit_'.$purpose,'strict'=>true,'schema'=>$schema]],
+            'provider'=>$provider,'max_output_tokens'=>2500,'reasoning'=>['effort'=>'low'],'store'=>false];
+    }
+    $curl = curl_init('https://openrouter.ai/api/v1/'.($image === null ? 'chat/completions' : 'responses'));
     curl_setopt_array($curl, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_TIMEOUT => 40,
         CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $key, 'Content-Type: application/json', 'HTTP-Referer: ' . ($config['site_url'] ?? 'https://github.com/pr4733k/habit'), 'X-Title: Habit'],
         CURLOPT_POSTFIELDS => json_encode($payload, JSON_THROW_ON_ERROR)]);
@@ -154,7 +160,7 @@ function dailyAiCall(PDO $db, array $config, string $purpose, string $system, ar
     $response = json_decode($raw, true);
     if (isset($response['usage'])) {
         $usage = $response['usage'];
-        $in = max(0, (int)($usage['prompt_tokens'] ?? 0)); $out = max(0, (int)($usage['completion_tokens'] ?? 0));
+        $in = max(0, (int)($usage['prompt_tokens'] ?? $usage['input_tokens'] ?? 0)); $out = max(0, (int)($usage['completion_tokens'] ?? $usage['output_tokens'] ?? 0));
         $cost = isset($usage['cost']) ? max(0, (float)$usage['cost']) : ($in * 1.5 + $out * 7.5) / 1000000;
         run($db, 'INSERT INTO daily_ai_usage (id, purpose, model, input_tokens, output_tokens, cost, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
             [bin2hex(random_bytes(16)), $purpose, $model, $in, $out, $cost, gmdate('Y-m-d\TH:i:s\Z')]);
@@ -164,8 +170,14 @@ function dailyAiCall(PDO $db, array $config, string $purpose, string $system, ar
         throw new DailyAiFailure(match ($status) { 401, 403 => 'Check the OpenRouter key and model permissions.', 402 => 'OpenRouter credits or the key budget are exhausted.',
             429 => 'OpenRouter is busy. A retry is scheduled.', default => 'OpenRouter could not process this note.' }, $status === 429 || $status >= 500);
     }
-    if (($response['choices'][0]['finish_reason'] ?? '') !== 'stop') throw new DailyAiFailure('The AI response was incomplete.', true);
-    $content = $response['choices'][0]['message']['content'] ?? null;
+    if ($image === null) {
+        if (($response['choices'][0]['finish_reason'] ?? '') !== 'stop') throw new DailyAiFailure('The AI response was incomplete.', true);
+        $content = $response['choices'][0]['message']['content'] ?? null;
+    } else {
+        if (($response['status'] ?? '') !== 'completed') throw new DailyAiFailure('The label response was incomplete. Try again.',true);
+        $content='';
+        foreach($response['output']??[] as $item)foreach($item['content']??[] as $part)if(($part['type']??'')==='output_text')$content.=$part['text']??'';
+    }
     try { $result = is_string($content) ? json_decode($content, true, 48, JSON_THROW_ON_ERROR) : null; }
     catch (JsonException) { throw new DailyAiFailure('The AI returned invalid JSON.', true); }
     if (!is_array($result)) throw new DailyAiFailure('The AI returned an invalid result.', true);

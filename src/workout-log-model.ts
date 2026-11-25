@@ -5,6 +5,7 @@ export type WeightBasis = typeof weightBases[number] | null;
 export type SetGroup = { weight: number | null; reps: number | null; sets: number; weight_unit: 'kg' | 'lb' | null; weight_basis: WeightBasis };
 export type ExerciseEntry = { id: string; date: string; revision: number; key: string; name: string; groups: SetGroup[]; workout: Workout & { venue?: string | null }; external?: boolean };
 export type SessionExercise = {
+  progression?: string | null;
   key: string; name: string; planned: { sets: number | null; reps: string | null; load: string | null; notes: string | null } | null;
   previous: { date: string; name: string; groups: SetGroup[]; complete: boolean; details: string | null } | null;
   saved: ExerciseEntry | null;

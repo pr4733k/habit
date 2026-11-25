@@ -1,0 +1,47 @@
+<?php
+declare(strict_types=1);
+require __DIR__.'/../public/daily/_store.php';
+require __DIR__.'/../public/daily/_ai.php';
+require __DIR__.'/../public/daily/_workout-plan.php';
+require __DIR__.'/../public/daily/_exercise-log.php';
+require __DIR__.'/../public/daily/_food-tools.php';
+$checks=0;
+function check(bool $value,string $message): void {global $checks;if(!$value)throw new RuntimeException($message);$checks++;}
+function rejects(callable $action,string $message): void {try{$action();}catch(DailyInput|DailyExerciseConflict $e){check(true,$message);return;}check(false,$message);}
+$db=new PDO('sqlite::memory:',options:[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC]);
+$db->exec(file_get_contents(__DIR__.'/../daily/schema.sql'));
+$label=['readable'=>true,'name'=>'Test noodles','unit'=>'g','basis_amount'=>100,'kcal'=>380,'protein'=>10,'carbs'=>65,'fat'=>9,'notes'=>null];
+$food=dailyLabelFood(['label'=>$label,'amount'=>75]);
+check($food['nutrition']['kcal']===285.0 && $food['nutrition']['carbs']===48.8,'Per-100g label scales in code');
+check($food['nutrition']['estimated']===false && $food['quantity']==='75 g','Label provenance and eaten amount retained');
+$serving=array_replace($label,['unit'=>'serving','basis_amount'=>1,'protein'=>25,'kcal'=>130]);
+check(dailyLabelFood(['label'=>$serving,'amount'=>.5])['nutrition']['protein']===12.5,'Half serving scales without grams confusion');
+$unknown=array_replace($label,['fat'=>null]);
+check(dailyLabelFood(['label'=>$unknown,'amount'=>50])['nutrition']['fat']===null,'Unreadable nutrients stay unknown');
+rejects(fn()=>dailyLabelFood(['label'=>$label,'amount'=>0]),'Amount is required');
+rejects(fn()=>dailyLabelFood(['label'=>array_replace($label,['basis_amount'=>0]),'amount'=>50]),'Zero basis rejected');
+rejects(fn()=>dailyLabel(array_replace($label,['readable'=>false])),'Unreadable labels rejected');
+rejects(fn()=>dailyLabel(array_replace($label,['protein'=>-1])),'Negative label value rejected');
+$request=['id'=>'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa','date'=>'2026-11-25','meal'=>'Lunch'];
+$note=dailySaveFood($db,$request,'2026-11-25',$food,'label:'.dailyFoodKey($food),'Printed label, 75 g');
+check($note['parsed']['meals'][0]['meal']==='Lunch','Food uses chosen meal group');
+check(dailySaveFood($db,$request,'2026-11-25',$food,'label:'.dailyFoodKey($food),'Printed label, 75 g')['id']===$note['id'],'Lost-response retry returns same note');
+check((int)$db->query('SELECT COUNT(*) FROM daily_notes')->fetchColumn()===1,'Retry never duplicates food');
+$repeat=dailyRepeatMeals($db)[0];
+$repeatRequest=['id'=>'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb','date'=>'2026-11-24','source'=>$repeat['source'],'index'=>$repeat['index'],'key'=>$repeat['key']];
+$again=dailyRepeatMeal($db,$repeatRequest,'2026-11-25');
+check($again['date']==='2026-11-24' && $again['parsed']['meals'][0]['nutrition']==$food['nutrition'],'Backdated repeat retains exact macros');
+check(count(dailyRepeatMeals($db))===1 && dailyRepeatMeals($db)[0]['count']===2,'Repeat choices group identical portions');
+rejects(fn()=>dailyRepeatMeal($db,array_replace($repeatRequest,['key'=>str_repeat('0',64)]),'2026-11-25'),'Changed original requires reload');
+rejects(fn()=>dailySaveFood($db,array_replace($request,['date'=>'2026-11-26']),'2026-11-25',$food,'x','x'),'Future date rejected');
+rejects(fn()=>dailySaveFood($db,$request,'2026-11-25',$food,'different','x'),'Reusing ID for a different food fails');
+$g=['weight'=>15,'weight_unit'=>'kg','weight_basis'=>'per_dumbbell','reps'=>10,'sets'=>3];
+$exercise=['planned'=>['reps'=>'8–12'],'previous'=>['complete'=>true,'groups'=>[$g]]];
+check(str_contains(dailyProgression($exercise),'11 reps') && str_contains(dailyProgression($exercise),'15 kg each'),'Progression adds a rep without doubling dumbbell load');
+$exercise['previous']['complete']=false;check(dailyProgression($exercise)===null,'Partial history never creates a progression cue');
+$g['reps']=14;$exercise['previous']=['complete'=>true,'groups'=>[$g]];
+$exercise['history']=[['complete'=>true,'groups'=>[$g]],['complete'=>true,'groups'=>[$g]]];
+check(str_contains(dailyProgression($exercise),'2–10%'),'Two sessions above target enable a bounded load cue');
+$exercise['history'][1]['groups'][0]['reps']=8;check(!str_contains(dailyProgression($exercise),'2–10%'),'One successful session does not trigger a load increase');
+$exercise['previous']['groups'][0]['weight_basis']=null;check(dailyProgression($exercise)===null,'Unknown load basis stays unknown');
+echo "$checks checks passed.\n";

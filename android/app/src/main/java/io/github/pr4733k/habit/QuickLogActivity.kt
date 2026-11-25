@@ -89,6 +89,13 @@ class QuickLogActivity : Activity() {
             setSelection(length())
         }
         body.addView(note, matchWidth(top = 8))
+        val foodActions = LinearLayout(this)
+        listOf("repeat" to "Repeat meal", "label" to "Scan label").forEach { (tool, title) ->
+            foodActions.addView(Button(this).apply { text = title; isAllCaps = false
+                setOnClickListener { startActivity(android.content.Intent(this@QuickLogActivity, MainActivity::class.java).putExtra("log", true).putExtra("date", date.toString()).putExtra("food", tool)) }
+            }, LinearLayout.LayoutParams(0, -2, 1f))
+        }
+        body.addView(foodActions)
         password = EditText(this).apply {
             hint = "Habit password"
             textSize = 16f

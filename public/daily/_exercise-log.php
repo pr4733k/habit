@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once __DIR__ . '/_progression.php';
 
 final class DailyExerciseConflict extends RuntimeException {}
 
@@ -95,11 +96,15 @@ function dailyWorkoutSession(PDO $db, string $date): array {
             if (!isset($remaining[$key])) continue;
             $groups = dailyExerciseGroups($sets['sets']);
             if (!$groups && $sets['complete']) continue;
-            $items[$key]['previous'] = ['date' => $row['log_date'], 'name' => $workout['name'], 'groups' => $groups,
+            $performance = ['date' => $row['log_date'], 'name' => $workout['name'], 'groups' => $groups,
                 'complete' => $sets['complete'], 'details' => $workout['details'] ?? null];
-            unset($remaining[$key]);
+            if (in_array($row['log_date'],array_column($items[$key]['history']??[],'date'),true)) continue;
+            $items[$key]['previous'] ??= $performance;
+            $items[$key]['history'][]=$performance;
+            if(count($items[$key]['history'])>=2)unset($remaining[$key]);
         }
     }
+    foreach($items as &$item){$item['progression']=dailyProgression($item);unset($item['history']);}unset($item);
     return ['date' => $date, 'title' => ($plan['kind'] ?? 'lift') === 'lift' ? ($plan['title'] ?? 'Workout') : 'Workout', 'venue' => $plan['venue'] ?? null,
         'minutes' => $plan['minutes'] ?? null, 'kind' => $plan['kind'] ?? null, 'reason' => $plan['reason'] ?? null, 'exercises' => array_values($items)];
 }

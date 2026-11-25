@@ -86,6 +86,7 @@ internal fun WorkoutWidget(modifier: GlanceModifier) {
                     groups.objects().take(3).forEach { Text(groupText(it), style = TextStyle(color = textMuted, fontSize = 12.sp), maxLines = 1) }
                     val source = current.optJSONObject("previous")?.stringOrNull("date")
                     if (source != null) Text("Last logged · $source", style = TextStyle(color = textMuted, fontSize = 10.sp), maxLines = 1)
+                    current.stringOrNull("progression")?.let { Text(it, style = TextStyle(color = purpleInk, fontSize = 11.sp), maxLines = 2) }
                     Spacer(GlanceModifier.height(8.dp))
                     Row(GlanceModifier.fillMaxWidth()) {
                         if (validGroups(groups) && groups.length() <= 3 && current.optJSONObject("previous")?.optBoolean("complete") == true) {

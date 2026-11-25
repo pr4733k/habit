@@ -7,6 +7,7 @@ require_once __DIR__ . '/_store.php';
 require_once __DIR__ . '/_ai.php';
 require_once __DIR__ . '/_workout-plan.php';
 require_once __DIR__ . '/_exercise-log.php';
+require_once __DIR__ . '/_food-tools.php';
 
 try {
     $configPath = PHP_SAPI === 'cli-server' ? '/.daily-data/config.php' : '/daily-config.php';
@@ -45,6 +46,18 @@ try {
         respond(['error' => 'Hosted processing is enabled. The external bridge is disabled.'], 409);
     }
     switch ($method . ' ' . $action) {
+        case 'GET repeat-meals':
+            respond(['meals'=>dailyRepeatMeals($db)]);
+        case 'POST repeat-meal':
+            respond(['note'=>dailyRepeatMeal($db,body(),$today)]);
+        case 'POST scan-label':
+            if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+            respond(['label'=>dailyScanLabel($db,$config,$_FILES['image']??[])]);
+        case 'POST save-label':
+            $input=body();$food=dailyLabelFood($input);
+            $nutrition=$food['nutrition'];
+            $description='Nutrition label: '.$food['name'].' · '.$food['quantity']."\n".json_encode($nutrition,JSON_THROW_ON_ERROR);
+            respond(['note'=>dailySaveFood($db,$input,$today,$food,'label:'.dailyFoodKey($food),$description)]);
         case 'GET workout-session':
             $date = logDate($_GET['date'] ?? $today);
             if ($date < DAILY_START_DATE || $date > $today) throw new DailyInput('Select a date within the tracking period.');
