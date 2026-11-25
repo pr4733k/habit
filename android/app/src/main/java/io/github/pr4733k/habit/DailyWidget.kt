@@ -24,6 +24,7 @@ import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
+import androidx.glance.action.actionParametersOf
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
@@ -45,6 +46,7 @@ import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.size
+import androidx.glance.appwidget.lazy.LazyColumn
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
@@ -52,6 +54,7 @@ import androidx.glance.unit.ColorProvider
 import java.text.NumberFormat
 import java.time.LocalDate
 import java.util.Locale
+import org.json.JSONObject
 
 class DailyWidgetReceiver : GlanceAppWidgetReceiver() {
     override val glanceAppWidget: GlanceAppWidget = DailyWidget()
@@ -94,8 +97,11 @@ internal class DailyWidget : GlanceAppWidget() {
 
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val cache = DailyCache(context)
+        val store = WorkoutStore(context)
         provideContent {
             val day by remember(cache) { cache.observe() }.collectAsState(cache.current())
+            val changes by remember(store) { store.observe() }.collectAsState(0L)
+            @Suppress("UNUSED_VARIABLE") val revision = changes
             DailyWidgetContent(day)
         }
     }
@@ -105,14 +111,13 @@ internal class DailyWidget : GlanceAppWidget() {
 private fun DailyWidgetContent(day: DailyCache.State) {
     val date = day.date
     val summary = day.summary
-    val compact = LocalSize.current.height < 184.dp
+    val large = LocalSize.current.height >= 320.dp
+    val compact = LocalSize.current.height < 184.dp || large
     val context = LocalContext.current
-    val setup = Intent(context, SetupActivity::class.java)
-    val dayLink = if (day.signedIn && day.origin != null) {
-        Intent(Intent.ACTION_VIEW, Uri.parse("${day.origin}/daily/?date=$date"))
-    } else setup
-    val quickLog = if (day.signedIn) Intent(context, QuickLogActivity::class.java) else setup
-    val waterAction = if (day.signedIn) actionRunCallback<AddWaterAction>() else actionStartActivity(setup)
+    val dayLink = Intent(context, MainActivity::class.java).putExtra("date", date.toString())
+    val quickLog = Intent(context, QuickLogActivity::class.java)
+    val waterSignIn = Intent(context, QuickLogActivity::class.java).putExtra("add_water", true)
+    val waterAction = if (day.signedIn) actionRunCallback<AddWaterAction>() else actionStartActivity(waterSignIn)
     val pad = if (compact) 6.dp else 9.dp
     val gap = if (compact) 3.dp else 5.dp
     Column(GlanceModifier.fillMaxSize().background(Color.White).cornerRadius(20.dp).padding(pad)) {
@@ -125,12 +130,7 @@ private fun DailyWidgetContent(day: DailyCache.State) {
                 "Date ${date.dayOfMonth}, macro progress", GlanceModifier.size(dialSize))
             if (summary == null) {
                 Text(
-                    when {
-                        day.origin == null -> "Connect your Habit site"
-                        !day.signedIn -> "Sign in to Habit"
-                        day.failed -> "Habit is unavailable"
-                        else -> "Loading today…"
-                    },
+                    if (day.failed) "Daily is unavailable" else "Loading today…",
                     modifier = GlanceModifier.padding(start = 8.dp),
                     style = TextStyle(color = ink, fontSize = 13.sp),
                     maxLines = 1,
@@ -196,13 +196,21 @@ private fun DailyWidgetContent(day: DailyCache.State) {
             Text(detail, modifier = GlanceModifier.fillMaxWidth().clickable(actionStartActivity(dayLink)),
                 style = TextStyle(color = muted, fontSize = 11.sp), maxLines = 1)
         }
-        Spacer(GlanceModifier.defaultWeight())
+        if (large) {
+            Spacer(GlanceModifier.height(12.dp))
+            WorkoutWidget(GlanceModifier.defaultWeight())
+        } else {
+            Spacer(GlanceModifier.defaultWeight())
+            Box(GlanceModifier.fillMaxWidth().height(32.dp).clickable(actionStartActivity(Intent(context, MainActivity::class.java).putExtra("workout", true))), contentAlignment = Alignment.CenterStart) {
+                Text("Open workout →", style = TextStyle(color = ink, fontSize = 12.sp))
+            }
+        }
         Spacer(GlanceModifier.height(gap))
         Row(GlanceModifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             val buttonHeight = if (compact) 30.dp else 36.dp
             Box(GlanceModifier.defaultWeight().height(buttonHeight).cornerRadius(9.dp)
                 .background(Color(0xFFEAF1FF)).clickable(actionStartActivity(quickLog)), contentAlignment = Alignment.Center) {
-                Text(if (day.signedIn) "Add a note" else "Connect Habit",
+                Text("Add a note",
                     style = TextStyle(color = blue, fontSize = 12.sp, fontWeight = FontWeight.Medium))
             }
             Box(GlanceModifier.padding(start = 4.dp).size(44.dp, buttonHeight).cornerRadius(9.dp)

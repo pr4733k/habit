@@ -29,7 +29,7 @@ import java.time.LocalDate
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 
-internal class DailyCache(context: Context) {
+internal class DailyCache(private val context: Context) {
     private val prefs = context.getSharedPreferences("widget_day", Context.MODE_PRIVATE)
     private val session = LogSession(context)
 
@@ -59,6 +59,7 @@ internal class DailyCache(context: Context) {
 
     fun save(connection: HabitConnection, summary: DailySummary) {
         if (session.connection() != connection) return
+        summary.workoutSession?.let { WorkoutStore(context).saveSession(connection.origin, it) }
         prefs.edit().putString("connection", connection.id)
             .putString("summary", summary.toJson().toString()).remove("failed").apply()
     }

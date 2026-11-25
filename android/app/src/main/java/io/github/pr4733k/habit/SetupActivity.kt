@@ -49,7 +49,7 @@ class SetupActivity : Activity() {
             contentDescription = "Habit site address"
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_URI
             setSingleLine()
-            id = 0x484142
+            id = android.view.View.generateViewId()
             setText(session.connection()?.origin.orEmpty())
         }
         form.addView(address, -1, -2)
@@ -96,6 +96,9 @@ class SetupActivity : Activity() {
                     status.text = "Connected. Add Habit from your home screen’s widget picker."
                     DailyWidget().updateAll(applicationContext)
                     DailyRefresh.now(applicationContext, userRequested = true)
+                    WorkoutStore.schedule(applicationContext)
+                    startActivity(android.content.Intent(this@SetupActivity, MainActivity::class.java))
+                    finish()
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: IOException) {

@@ -25,6 +25,13 @@ internal fun habitOrigin(input: String): String {
 }
 
 internal class DailyApi(private val site: String) {
+    fun workoutSession(date: LocalDate, session: String): JSONObject = request("workout-session&date=$date", session = session).json
+
+    fun saveExercise(payload: JSONObject, key: String, session: String): JSONObject = try {
+        confirmExercise(request("save-exercise", payload, session).json, payload.getString("date"), key)
+    } catch (error: IllegalArgumentException) { throw IOException(error.message, error) }
+
+
     fun timeZone(): ZoneId {
         val value = request("settings").json.optString("timeZone")
         return runCatching { ZoneId.of(value) }.getOrElse { throw IOException("This address did not return Habit settings.") }

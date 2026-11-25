@@ -1,0 +1,44 @@
+.habit-session-heading { display: flex; justify-content: space-between; align-items: start; gap: 1rem; }
+.habit-session-heading p { font-size: 0.75rem; margin-bottom: 0.25rem; }
+.habit-session-heading h2 { font-size: 1.375rem; line-height: 1.3; letter-spacing: -0.025em; font-weight: 550; }
+.habit-session-link { min-height: 2.75rem; border: 0; padding: 0.5rem 0; background: transparent; color: var(--accent); cursor: pointer; font: inherit; text-align: left; }
+.habit-session-link:disabled { opacity: 0.55; cursor: default; }
+.habit-session-link:focus-visible, .habit-exercise-toggle:focus-visible, .habit-remove-group:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.habit-session-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; margin-top: 1rem; color: var(--text-secondary); font-size: 0.75rem; }
+.habit-session-progress { display: flex; gap: 0.25rem; margin: 0.75rem 0 1rem; }
+.habit-session-progress span { height: 3px; flex: 1; border-radius: 0.25rem; background: var(--rule); }
+.habit-session-progress [data-saved] { background: #28816b; }
+.habit-session-exercise { border-bottom: 1px solid var(--rule); }
+.habit-exercise-toggle { display: flex; gap: 0.75rem; align-items: center; width: 100%; min-height: 4.5rem; padding: 1rem 0; border: 0; background: transparent; color: var(--text-primary); font: inherit; text-align: left; cursor: pointer; }
+.habit-exercise-number { display: grid; place-items: center; width: 1.75rem; height: 1.75rem; flex: none; border-radius: 50%; background: var(--badge-bg); color: var(--text-secondary); font-size: 0.75rem; }
+.habit-exercise-number[data-saved] { color: #28816b; }
+.habit-exercise-number svg { width: 1rem; height: 1rem; }
+.habit-exercise-name { flex: 1; min-width: 0; }
+.habit-exercise-name strong { display: block; font-weight: 550; overflow-wrap: anywhere; }
+.habit-exercise-name small { display: block; margin-top: 0.25rem; color: var(--text-secondary); font-size: 0.75rem; overflow-wrap: anywhere; }
+.habit-exercise-toggle-label { font-size: 0.75rem; color: var(--text-secondary); }
+.habit-exercise-editor { padding-bottom: 1.5rem; }
+.habit-exercise-previous { padding: 0.75rem; margin-bottom: 1rem; border-radius: 0.5rem; background: var(--badge-bg); }
+.habit-exercise-previous > span { color: var(--text-secondary); font-size: 0.75rem; }
+.habit-exercise-previous p { margin-top: 0.25rem; white-space: pre-line; overflow-wrap: anywhere; }
+.habit-exercise-no-history { margin-bottom: 1rem; font-size: 0.75rem; }
+.habit-exercise-group + .habit-exercise-group { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--rule); }
+.habit-exercise-load { display: flex; justify-content: space-between; gap: 0.5rem; align-items: center; margin-bottom: 0.375rem; min-height: 2.75rem; }
+.habit-exercise-load label { min-width: 0; }
+.habit-exercise-load select { max-width: 100%; min-height: 2.75rem; padding: 0.375rem 0.5rem; border: 1px solid var(--badge-border); border-radius: 0.375rem; background: var(--page-bg); color: var(--text-body); font: inherit; }
+.habit-remove-group { display: grid; place-items: center; flex: none; width: 2.75rem; height: 2.75rem; padding: 0; border: 0; background: transparent; color: var(--text-secondary); cursor: pointer; }
+.habit-remove-group svg { width: 1rem; height: 1rem; }
+.habit-exercise-fields { display: grid; grid-template-columns: 1.2fr 1fr 1fr; gap: 0.75rem; }
+.habit-exercise-fields label { display: grid; gap: 0.375rem; min-width: 0; }
+.habit-exercise-fields label > span { font-size: 0.75rem; color: var(--text-secondary); }
+.habit-exercise-fields input { width: 100%; min-width: 0; height: 3rem; padding: 0.5rem; border: 1px solid var(--badge-border); border-radius: 0.5rem; background: var(--page-bg); color: var(--text-primary); font: inherit; font-size: 1rem; text-align: center; font-variant-numeric: tabular-nums; }
+.habit-exercise-fields input:focus-visible, .habit-exercise-load select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.habit-exercise-fields input:disabled { opacity: 0.6; }
+.habit-exercise-save { display: flex; width: 100%; min-height: 3rem; margin-top: 0.5rem; }
+.habit-exercise-error { margin: 0.5rem 0; color: #a02543; }
+.habit-session-receipt { min-height: 1.5rem; margin-top: 1rem; color: #28816b; font-size: 0.75rem; }
+.habit-session-footer { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; }
+.habit-session-footer > span { color: var(--text-secondary); font-size: 0.75rem; }
+.habit-session-muscles { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--rule); }
+.habit-session-muscles > summary { cursor: pointer; min-height: 2.75rem; color: var(--text-secondary); }
+@media (max-width: 540px) { .habit-exercise-load select { font-size: 1rem; } .habit-exercise-fields { gap: 0.5rem; } }

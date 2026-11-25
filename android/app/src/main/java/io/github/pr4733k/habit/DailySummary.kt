@@ -3,8 +3,10 @@ package io.github.pr4733k.habit
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDate
+import java.time.ZoneId
 
 internal val macroKeys = listOf("protein", "carbs", "fat")
+internal fun indiaToday(): LocalDate = LocalDate.now(ZoneId.of("Asia/Kolkata"))
 
 internal data class DailySummary(
     val date: LocalDate,
@@ -13,6 +15,7 @@ internal data class DailySummary(
     val waterMl: Int?,
     val latest: List<String>,
     val pendingCount: Int = 0,
+    val workoutSession: JSONObject? = null,
 ) {
     fun toJson() = JSONObject().apply {
         put("date", date.toString())
@@ -21,6 +24,7 @@ internal data class DailySummary(
         put("waterMl", waterMl ?: JSONObject.NULL)
         put("latest", JSONArray(latest))
         put("pendingCount", pendingCount)
+        put("workoutSession", workoutSession ?: JSONObject.NULL)
     }
 
     companion object {
@@ -33,6 +37,7 @@ internal data class DailySummary(
                 (0 until values.length()).map(values::getString)
             }.orEmpty(),
             pendingCount = json.optInt("pendingCount"),
+            workoutSession = json.optJSONObject("workoutSession"),
         )
 
         fun fromWidget(json: JSONObject) = DailySummary(
@@ -45,6 +50,7 @@ internal data class DailySummary(
                 .map { it.optString("name").trim() }.filter(String::isNotEmpty)
                 .asReversed().distinct().take(2),
             pendingCount = json.optInt("pendingCount"),
+            workoutSession = json.optJSONObject("workoutSession"),
         )
 
         fun fromMonth(month: JSONObject, date: LocalDate): DailySummary {

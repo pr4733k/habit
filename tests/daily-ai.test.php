@@ -65,11 +65,12 @@ $scaled = dailyScaleNutrition(['meals' => [['name' => 'Whey', 'reference_id' => 
 check($scaled['meals'][0]['nutrition']['protein'] === 50.0 && $scaled['meals'][0]['nutrition']['kcal'] === 264.0, 'Reference scaling happens in PHP and wins over model math');
 check(dailyDefaultMeal('2026-11-22 07:29:00') === 'Breakfast' && dailyDefaultMeal('2026-11-22 07:30:00') === 'Lunch', 'Meal boundary 1pm India');
 check(dailyDefaultMeal('2026-11-22 10:30:00') === 'Snack' && dailyDefaultMeal('2026-11-22 13:30:00') === 'Dinner', '4pm snack and 7pm dinner');
-$planFixture = ['kind' => 'lift', 'title' => 'Upper body', 'reason' => 'Lower body was trained yesterday.', 'venue' => 'Example Gym', 'minutes' => 60,
+$planFixture = ['kind' => 'lift', 'title' => 'Upper body', 'reason' => 'Lower body was trained yesterday.', 'venue' => 'Aurum', 'minutes' => 60,
     'exercises' => [['name' => 'Bench press', 'sets' => 3, 'reps' => '8–10', 'load' => null, 'load_basis' => 'unknown', 'notes' => null]], 'notes' => null];
 $clock = new DateTimeImmutable('2026-11-22T12:00:00+05:30'); $generateCalls = 0;
 $generated = dailyGeneratePlan($db, $config, $clock, false, static function ($context) use (&$generateCalls, $planFixture) {
-    $generateCalls++; check(count($context['days']) === 7, 'Generator receives seven dates'); check($context['preferences']['available_session_minutes'] === 60, 'Session default is 60 minutes'); return $planFixture;
+    $generateCalls++; check(count($context['days']) === 7, 'Generator receives seven dates'); check($context['preferences']['available_session_minutes'] === 60, 'Session default is 60 minutes');
+    check(!isset($context['today_inputs']), 'Old clients can generate without optional inputs'); return $planFixture;
 });
 check($generated['plan']['kind'] === 'lift', 'Plan persists');
 dailyGeneratePlan($db, $config, $clock, false, static function () use (&$generateCalls) { $generateCalls++; });
@@ -77,6 +78,33 @@ check($generateCalls === 1, 'Reading/repeated generation reuses the saved plan')
 $feed = dailyCoachResponse($db, $clock, 7); $today = $feed['days'][6];
 check($today['training_status'] === 'unlogged' && !$today['completed'], 'A plan never becomes completion or rest');
 check($today['recommendation']['status'] === 'planned' && $today['recommendation']['source'] === 'habit-ai', 'Coach JSON includes the saved suggestion without changing legacy planned types');
+check(dailyWorkoutInputs(null) === [] && dailyWorkoutInputs(['focus' => '  ', 'soreness' => '', 'tomorrow_plan' => '']) === [], 'All planning inputs are optional');
+check(dailyWorkoutInputs(['focus' => '  Chest  ']) === ['focus' => 'Chest'], 'Planning inputs are trimmed');
+foreach (['light', 'regular', 'intense'] as $effort) check(dailyWorkoutInputs(['effort' => $effort]) === ['effort' => $effort], 'Selected effort is preserved: ' . $effort);
+foreach (['not an object', ['soreness' => 5], ['focus' => str_repeat('x', 601)], ['soreness' => null], ['a list'], ['effort' => 'maximum'], ['effort' => 5]] as $invalid) {
+    try { dailyWorkoutInputs($invalid); check(false, 'Invalid planning input must fail'); }
+    catch (DailyInput) { check(true, 'Invalid or overlong inputs rejected before a model call'); }
+}
+dailyCoachSaveSettings($db, ['preferences' => ['gym_venue' => 'Aurum'], 'fixed_sessions' => [[
+    'id' => 'fixed-test', 'type' => 'gym', 'venue' => 'Troop', 'weekday' => 1,
+    'start_date' => '2026-11-23', 'end_date' => '2026-11-23', 'exercises' => ['Squats'], 'muscle_groups' => ['quads'],
+]]]);
+run($db, 'INSERT INTO daily_notes (id,log_date,raw_note,revision,created_at,parsed) VALUES (?,?,?,1,?,?)',
+    ['recovery-test', '2026-11-21', 'Mild soreness', '2026-11-21 12:00:00', json_encode(dailyResult(['recovery' => [['soreness' => ['quads' => 'mild']]]]))]);
+$before = dailyCoachResponse($db, $clock, 7);
+run($db, 'UPDATE daily_workout_plans SET last_started_at = 0 WHERE log_date = ?', ['2026-11-22']);
+$hints = ['focus' => 'Chest and triceps', 'soreness' => 'Hamstrings sore', 'tomorrow_plan' => 'Squats at Troop', 'effort' => 'intense'];
+$regenerated = dailyGeneratePlan($db, $config, $clock, true, static function ($context) use ($hints, $planFixture) {
+    check($context['today_inputs'] === ['date' => '2026-11-22', 'tomorrow_date' => '2026-11-23'] + $hints, 'All three inputs reach the generator with India-local dates');
+    check(count($context['days']) === 7 && !isset($context['days'][6]['recommendation']), 'Fresh hints supplement history without treating the old plan as a workout');
+    return array_replace($planFixture, ['title' => 'Updated upper-body plan']);
+}, $hints);
+check($regenerated['plan']['title'] === 'Updated upper-body plan', 'Regenerate replaces the saved suggestion');
+$after = dailyCoachResponse($db, $clock, 7);
+foreach (['days', 'upcoming_fixed', 'preferences'] as $key) {
+    if ($key === 'days') { foreach ($before[$key] as &$day) unset($day['recommendation']); unset($day); foreach ($after[$key] as &$day) unset($day['recommendation']); unset($day); }
+    check(($before[$key] ?? null) == ($after[$key] ?? null), 'Planning inputs do not create completed training, recovery or bookings: ' . $key);
+}
 check(dailyEquipment([]) === [], 'An install without an equipment inventory does not invent one');
 run($db, 'INSERT INTO daily_notes (id,log_date,raw_note,revision,created_at,parsed) VALUES (?,?,?,1,?,?)', ['dal-reference','2026-11-21','200 g dal','2026-11-21 10:00:00',json_encode(dailyResult(['meals'=>[['name'=>'Dal','quantity'=>'200 g cooked','nutrition'=>['kcal'=>180,'protein'=>10,'carbs'=>24,'fat'=>5,'estimated'=>true]]]]))]);
 check(count(dailyFoodReferences($db, [], '200 g dal')) === 1, 'Short Indian food names reuse matching prior foods');

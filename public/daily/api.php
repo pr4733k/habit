@@ -6,6 +6,7 @@ header('X-Content-Type-Options: nosniff');
 require_once __DIR__ . '/_store.php';
 require_once __DIR__ . '/_ai.php';
 require_once __DIR__ . '/_workout-plan.php';
+require_once __DIR__ . '/_exercise-log.php';
 
 try {
     $configPath = PHP_SAPI === 'cli-server' ? '/.daily-data/config.php' : '/daily-config.php';
@@ -13,7 +14,7 @@ try {
     if (!is_file($configFile)) {
         respond(['error' => 'The daily tracker API needs local or hosting configuration.'], 503);
     }
-    $config = (require $configFile) + ['local' => false, 'user' => null, 'password' => null, 'timezone' => 'UTC', 'public_calendar' => false, 'auto_sync' => false];
+    $config = (require $configFile) + ['local' => false, 'user' => null, 'password' => null, 'timezone' => 'Asia/Kolkata', 'public_calendar' => false, 'auto_sync' => true];
     $action = $_GET['action'] ?? 'session';
     if (!is_string($action)) {
         throw new DailyInput('Invalid tracker request.');
@@ -44,6 +45,12 @@ try {
         respond(['error' => 'Hosted processing is enabled. The external bridge is disabled.'], 409);
     }
     switch ($method . ' ' . $action) {
+        case 'GET workout-session':
+            $date = logDate($_GET['date'] ?? $today);
+            if ($date < DAILY_START_DATE || $date > $today) throw new DailyInput('Select a date within the tracking period.');
+            respond(dailyWorkoutSession($db, $date));
+        case 'POST save-exercise':
+            respond(['entry' => dailySaveExercise($db, body(), $today)]);
         case 'GET today':
             $day = dailySnapshot($db, $today);
             unset($day['pending']);
@@ -52,8 +59,9 @@ try {
             if (dailyProcessor($config) !== 'openrouter') respond(['error' => 'Enable OpenRouter to generate a workout.'], 409);
             $data = body();
             if (isset($data['regenerate']) && !is_bool($data['regenerate'])) throw new DailyInput('Invalid generation request.');
+            $inputs = dailyWorkoutInputs($data['inputs'] ?? null);
             if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
-            respond(dailyGeneratePlan($db, $config, new DateTimeImmutable('now', new DateTimeZone($config['timezone'])), $data['regenerate'] ?? false));
+            respond(dailyGeneratePlan($db, $config, new DateTimeImmutable('now', new DateTimeZone($config['timezone'])), $data['regenerate'] ?? false, null, $inputs));
         case 'POST retry-note':
             if (dailyProcessor($config) !== 'openrouter') respond(['error' => 'Hosted processing is not enabled.'], 409);
             $note = getNote($db, noteId(body()['id'] ?? null));
@@ -67,7 +75,7 @@ try {
             if (!is_string($days) || !preg_match('/^[1-9][0-9]?$/D', $days) || (int)$days > 60) {
                 throw new DailyInput('Use days between 1 and 60.');
             }
-            respond(dailyCoachResponse($db, new DateTimeImmutable('now', new DateTimeZone($config['timezone'])), (int)$days));
+            respond(dailyCoachResponse($db, new DateTimeImmutable('now', new DateTimeZone('Asia/Kolkata')), (int)$days));
         case 'GET coach-settings':
             respond(dailyCoachState($db));
         case 'POST coach-settings':
@@ -134,6 +142,7 @@ try {
             $day = dailySnapshot($db, $date);
             if ($action === 'widget') {
                 $day['pendingCount'] = count($day['pending']);
+                $day['workoutSession'] = dailyWorkoutSession($db, $date);
                 unset($day['pending']);
             }
             respond($day);
@@ -200,6 +209,8 @@ try {
         default:
             respond(['error' => 'Unknown tracker request.'], 404);
     }
+} catch (DailyExerciseConflict $error) {
+    respond(['error' => $error->getMessage()], 409);
 } catch (DailyAiFailure $error) {
     respond(['error' => $error->getMessage()], 503);
 } catch (DailyInput | JsonException $error) {

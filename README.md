@@ -64,13 +64,15 @@ The calendar and quick log require the password by default. Set `public_calendar
 
 ## Android widget (optional)
 
-The widget shows today’s macros, water, and recent entries. Tap **+** beside Water to log 100 mL directly. **Add a note** opens a text box and uses the same processing queue as the web form. The widget checks again after a pending note is saved. You can also tap the refresh icon.
+The app opens your Habit website with its calendar, Workout tab, and daily logs. The widget shows macros, water, and an exercise queue when resized taller. Log the displayed previous sets in one tap, or edit weights, reps, and set groups in a native popup. Each exercise saves separately. Pending exercise saves stay on the phone and retry when connected.
+
+Tap **+** beside Water to add 100 mL without AI. **Add a note** opens a text box and uses the same processing queue as the web form. The widget refreshes after your saves; Android may delay background checks for changes made on another device. Tap the refresh icon to request an update now.
 
 If you already host Habit, rebuild and deploy the latest code to enable the water button.
 
 1. On Android 8 or later, download [Habit.apk from GitHub Releases](https://github.com/pr4733k/habit/releases/latest/download/Habit.apk) and open it. If Android asks, allow the app that opened the APK to install it.
 2. Open **Habit** and enter your own Habit site’s HTTPS address and the password you use at `/log`. The phone needs to be able to reach that address. A site running at `127.0.0.1` on your computer is only available on that computer.
-3. Touch and hold an empty spot on your home screen, choose **Widgets → Habit**, and drag the widget into place. To change sites, open Habit again and connect with the new address and password.
+3. Touch and hold an empty spot on your home screen, choose **Widgets → Habit**, and drag the widget into place. Drag its resize handles for a larger workout view. To change sites, open Habit and tap **Connection**.
 
 If you want help with the widget, paste this separate prompt into your AI tool.
 
