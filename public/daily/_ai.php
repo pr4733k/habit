@@ -156,7 +156,7 @@ function dailyAiCall(PDO $db, array $config, string $purpose, string $system, ar
         CURLOPT_POSTFIELDS => json_encode($payload, JSON_THROW_ON_ERROR)]);
     if (!empty($config['openrouter_ca_file'])) curl_setopt($curl, CURLOPT_CAINFO, $config['openrouter_ca_file']);
     $raw = curl_exec($curl); $status = (int)curl_getinfo($curl, CURLINFO_HTTP_CODE);
-    if ($raw === false) throw new DailyAiFailure('Could not reach OpenRouter. A retry is scheduled.', true);
+    if ($raw === false) throw new DailyAiFailure($image === null ? 'Could not reach OpenRouter. A retry is scheduled.' : 'Could not reach OpenRouter. Tap Retry photo.', true);
     $response = json_decode($raw, true);
     if (isset($response['usage'])) {
         $usage = $response['usage'];
@@ -168,7 +168,7 @@ function dailyAiCall(PDO $db, array $config, string $purpose, string $system, ar
     if ($status !== 200 || isset($response['error'])) {
         $status = (int)($response['error']['code'] ?? $status);
         throw new DailyAiFailure(match ($status) { 401, 403 => 'Check the OpenRouter key and model permissions.', 402 => 'OpenRouter credits or the key budget are exhausted.',
-            429 => 'OpenRouter is busy. A retry is scheduled.', default => 'OpenRouter could not process this note.' }, $status === 429 || $status >= 500);
+            429 => $image === null ? 'OpenRouter is busy. A retry is scheduled.' : 'OpenRouter is busy. Tap Retry photo.', default => 'OpenRouter could not process this note.' }, $status === 429 || $status >= 500);
     }
     if ($image === null) {
         if (($response['choices'][0]['finish_reason'] ?? '') !== 'stop') throw new DailyAiFailure('The AI response was incomplete.', true);

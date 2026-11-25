@@ -14,6 +14,8 @@ export function FoodTools({ date, onSaved, photoRequest }: { date: string; onSav
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
+  const [scanFailed, setScanFailed] = useState(false);
+  const lastPhoto = useRef<File | null>(null);
   const [error, setError] = useState('');
   const [label, setLabel] = useState<Label | null>(null);
   const [amount, setAmount] = useState('');
@@ -43,7 +45,7 @@ export function FoodTools({ date, onSaved, photoRequest }: { date: string; onSav
   }
   async function scan(file: File) {
     if (lock.current) return;
-    lock.current = true; setBusy(true); setReading(true); setError(''); setReceipt(null); setLabel(null);
+    lock.current = true; setBusy(true); setReading(true); setScanFailed(false); setError(''); setReceipt(null); setLabel(null); lastPhoto.current = file;
     try {
       const image = await compressedLabel(file);
       const body = new FormData(); body.append('image', image, 'label.jpg');
@@ -51,8 +53,8 @@ export function FoodTools({ date, onSaved, photoRequest }: { date: string; onSav
       const data = await response.json() as { label?: Label; error?: string };
       if (!response.ok) throw new Error(data.error || 'Could not read this label. Try again.');
       if (!data.label) throw new Error('No label was returned. Try a clearer photo.');
-      setLabel(data.label); setPhotoOptions(false); setAmount('');
-    } catch (error) { setError((error as Error).message); }
+      setLabel(data.label); setPhotoOptions(false); setAmount(''); lastPhoto.current = null;
+    } catch (error) { setError((error as Error).message); setScanFailed(true); }
     finally { lock.current = false; setBusy(false); setReading(false); if (input.current) input.current.value = ''; if (camera.current) camera.current.value = ''; }
   }
   const consumed = Number(amount);
@@ -88,6 +90,7 @@ export function FoodTools({ date, onSaved, photoRequest }: { date: string; onSav
         <button type="button" className="daily-button" disabled={busy} onClick={() => setLabel(null)}>Cancel</button></div>
     </div>}
     {error && <p className="daily-error" role="alert">{error}</p>}
+    {scanFailed && lastPhoto.current && <button type="button" className="daily-button" disabled={busy} onClick={() => { if (lastPhoto.current) void scan(lastPhoto.current); }}>Retry photo</button>}
     {receipt && <p className="daily-receipt" role="status">Logged · {receipt.parsed?.meals[0]?.name} <a className="text-link" href={`/daily?date=${receipt.date}`}>View day</a></p>}
   </section>;
 }

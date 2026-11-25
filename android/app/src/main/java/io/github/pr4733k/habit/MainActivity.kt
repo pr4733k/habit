@@ -29,6 +29,7 @@ class MainActivity : Activity() {
     private lateinit var unlockButton: Button
     private var photoCallback: ValueCallback<Array<Uri>>? = null
     private var captureUri: Uri? = null
+    private val captureFiles = mutableListOf<File>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,7 +56,8 @@ class MainActivity : Activity() {
                     photoCallback?.onReceiveValue(null); photoCallback = callback
                     val chooser = if (params.isCaptureEnabled) {
                         val directory = File(cacheDir, "label-captures").apply { mkdirs() }
-                        captureUri = FileProvider.getUriForFile(this@MainActivity, "$packageName.label-files", File.createTempFile("label-", ".jpg", directory))
+                        val capture = File.createTempFile("label-", ".jpg", directory).also(captureFiles::add)
+                        captureUri = FileProvider.getUriForFile(this@MainActivity, "$packageName.label-files", capture)
                         Intent(MediaStore.ACTION_IMAGE_CAPTURE).putExtra(MediaStore.EXTRA_OUTPUT, captureUri)
                             .addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_READ_URI_PERMISSION)
                             .apply { clipData = android.content.ClipData.newRawUri("Nutrition label", captureUri) }
@@ -155,5 +157,5 @@ class MainActivity : Activity() {
         photoCallback?.onReceiveValue(selected?.takeIf { it.scheme == "content" }?.let { arrayOf(it) })
         photoCallback = null; captureUri = null
     }
-    override fun onDestroy() { scope.cancel(); photoCallback?.onReceiveValue(null); if (::web.isInitialized) web.destroy(); File(cacheDir,"label-captures").listFiles()?.forEach { it.delete() }; super.onDestroy() }
+    override fun onDestroy() { scope.cancel(); photoCallback?.onReceiveValue(null); if (::web.isInitialized) web.destroy(); captureFiles.forEach { it.delete() }; super.onDestroy() }
 }
