@@ -120,6 +120,13 @@ function dailyDefaultMeal(string $createdAt): string
     };
 }
 
+function dailyFoodPortion(mixed $input): array {
+    if(!is_array($input))throw new DailyInput('Invalid food portion.');
+    $amount=dailyNumber($input['amount']??null,30000);
+    if($amount<=0)throw new DailyInput('Food portion must be greater than zero.');
+    return ['amount'=>$amount,'unit'=>dailyChoice($input['unit']??null,['g','ml','piece','serving'])];
+}
+
 function dailyResult(mixed $result, string $defaultMeal = 'Other'): array
 {
     if (!is_array($result)) {
@@ -129,7 +136,7 @@ function dailyResult(mixed $result, string $defaultMeal = 'Other'): array
         'name' => dailyText($item['name'] ?? null, 160),
         'quantity' => dailyOptionalText($item['quantity'] ?? null, 120),
         'nutrition' => dailyNutrition($item['nutrition'] ?? null),
-    ];
+    ] + (isset($item['portion'])?['portion'=>dailyFoodPortion($item['portion'])]:[]);
     $parsed = [
         'meals' => dailyItems($result['meals'] ?? [], static fn($item) => $intake($item) + [
             'meal' => dailyChoice($item['meal'] ?? $defaultMeal, ['Breakfast', 'Lunch', 'Dinner', 'Snack', 'Other']),

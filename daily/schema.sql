@@ -49,3 +49,11 @@ CREATE TABLE IF NOT EXISTS daily_ai_usage (
         id VARCHAR(32) PRIMARY KEY, purpose VARCHAR(16) NOT NULL, model VARCHAR(100) NOT NULL,
         input_tokens INTEGER NOT NULL, output_tokens INTEGER NOT NULL, cost DECIMAL(12,8) NOT NULL,
         created_at VARCHAR(32) NOT NULL);
+
+CREATE TABLE IF NOT EXISTS daily_saved_foods (
+  id VARCHAR(36) PRIMARY KEY,
+  name VARCHAR(160) NOT NULL,
+  identity_key VARCHAR(64) NOT NULL UNIQUE,
+  template TEXT NOT NULL,
+  created_at VARCHAR(26) NOT NULL
+);

@@ -18,14 +18,14 @@ function dailyRepeatMeals(PDO $db): array {
     uasort($items,static fn($a,$b)=>($b['count']<=>$a['count']) ?: strcmp($b['lastDate'],$a['lastDate']));
     return array_slice(array_values($items),0,12);
 }
-function dailySaveFood(PDO $db,array $data,string $today,array $food,string $fingerprint,string $description): array {
+function dailySaveFood(PDO $db,array $data,string $today,array $food,string $fingerprint,string $description,array $metadata=[]): array {
     $id=noteId($data['id']??null);$date=logDate($data['date']??null);
     if($date<DAILY_START_DATE || $date>$today)throw new DailyInput('Select today or a previous tracking date.');
     $food['meal']=dailyChoice($data['meal']??dailyDefaultMeal(gmdate('Y-m-d H:i:s')),['Breakfast','Lunch','Dinner','Snack','Other']);
-    $parsed=dailyResult(['meals'=>[$food]]);$parsed['food_tool']=['fingerprint'=>$fingerprint];
+    $parsed=dailyResult(['meals'=>[$food]]);$parsed['food_tool']=['fingerprint'=>$fingerprint]+$metadata;
     $json=json_encode($parsed,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE);
     try {
-        run($db,'INSERT INTO daily_notes(id,log_date,raw_note,revision,created_at,parsed) VALUES(?,?,?,1,?,?)',[$id,$date,$description,gmdate('Y-m-d H:i:s'),$json]);
+        run($db,'INSERT INTO daily_notes(id,log_date,raw_note,revision,created_at,parsed) VALUES(?,?,?,1,?,?)',[$id,$date,$description,(new DateTimeImmutable('now',new DateTimeZone('UTC')))->format('Y-m-d H:i:s.u'),$json]);
     }catch(PDOException $error){if($error->getCode()!=='23000')throw $error;}
     $row=run($db,'SELECT * FROM daily_notes WHERE id=?',[$id])->fetch();
     $existing=$row['parsed']?json_decode($row['parsed'],true,32,JSON_THROW_ON_ERROR):[];
@@ -61,7 +61,7 @@ function dailyLabelFood(array $input): array {
     if($amount<=0)throw new DailyInput('Enter the amount you ate.');
     $nutrition=['estimated'=>false];
     foreach(['kcal','protein','carbs','fat'] as $key)$nutrition[$key]=$label[$key]===null?null:round($label[$key]*$amount/$label['basis_amount'],1);
-    return ['name'=>$label['name'],'quantity'=>$amount.' '.$label['unit'],'nutrition'=>dailyNutrition($nutrition)];
+    return ['name'=>$label['name'],'quantity'=>$amount.' '.$label['unit'],'nutrition'=>dailyNutrition($nutrition),'portion'=>['amount'=>$amount,'unit'=>$label['unit']]];
 }
 function dailyScanLabel(PDO $db,array $config,array $upload): array {
     if(dailyProcessor($config)!=='openrouter')throw new DailyInput('Enable OpenRouter to read nutrition labels.');

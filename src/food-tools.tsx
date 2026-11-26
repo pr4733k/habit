@@ -4,14 +4,12 @@ import { useEffect, useRef, useState } from 'react';
 import { Camera, ImagePlus } from 'lucide-react';
 import { api, formatNumber, type Note, type Nutrition } from './model';
 import './food-tools.css';
+import { SavedFoods } from './repeat-foods';
 
-type Repeat = { key: string; source: string; index: number; lastDate: string; count: number; food: { name: string; quantity: string | null; nutrition: Nutrition } };
 type Label = { readable: boolean; name: string; unit: 'g' | 'ml' | 'serving'; basis_amount: number; kcal: number | null; protein: number | null; carbs: number | null; fat: number | null; notes: string | null };
 const nutrients = ['kcal', 'protein', 'carbs', 'fat'] as const;
 
 export function FoodTools({ date, onSaved, photoRequest }: { date: string; onSaved: (note: Note) => void; photoRequest: number }) {
-  const [repeats, setRepeats] = useState<Repeat[]>([]);
-  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
   const [scanFailed, setScanFailed] = useState(false);
@@ -24,10 +22,9 @@ export function FoodTools({ date, onSaved, photoRequest }: { date: string; onSav
   const camera = useRef<HTMLInputElement>(null);
   const [photoOptions, setPhotoOptions] = useState(false);
   useEffect(() => { if (photoRequest) setPhotoOptions(true); }, [photoRequest]);
-  useEffect(() => { const mode = new URLSearchParams(window.location.search).get('food'); if (mode === 'label') setPhotoOptions(true); if (mode === 'repeat') setOpen(true); }, []);
+  useEffect(() => { if (new URLSearchParams(window.location.search).get('food') === 'label') setPhotoOptions(true); }, []);
   const lock = useRef(false);
   const attempt = useRef<{ fingerprint: string; id: string } | null>(null);
-  useEffect(() => { let active = true; api<{ meals: Repeat[] }>('repeat-meals').then(data => { if (active) setRepeats(data.meals); }).catch(() => {}); return () => { active = false; }; }, []);
   function id(fingerprint: string) {
     if (!attempt.current) attempt.current = { fingerprint, id: crypto.randomUUID() };
     return attempt.current.id;
@@ -59,14 +56,11 @@ export function FoodTools({ date, onSaved, photoRequest }: { date: string; onSav
   }
   const consumed = Number(amount);
   return <section className="habit-food-tools" aria-label="Quick food logging" aria-busy={busy}>
+    <SavedFoods date={date} onSaved={onSaved} />
     <div className="habit-food-actions">
-      <button type="button" className="daily-button" disabled={busy} onClick={() => setOpen(value => !value)} aria-expanded={open}>Repeat meal</button>
       <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void scan(file); }} />
       <input ref={camera} type="file" accept="image/*" capture="environment" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void scan(file); }} />
     </div>
-    {open && <div className="habit-food-repeat-list">{repeats.length ? repeats.map(item => <button type="button" key={item.key} disabled={busy} onClick={() => save('repeat-meal', { source: item.source, index: item.index, key: item.key })}>
-      <strong>{item.food.name}</strong><span>{item.food.quantity || 'Same logged portion'} · {formatNumber(item.food.nutrition.kcal ?? 0)} kcal{item.food.nutrition.estimated && ' · Estimate'}</span>
-    </button>) : <p className="daily-muted">Meals with saved macros will appear here after you log them.</p>}</div>}
     {photoOptions && <div className="habit-photo-options"><p>Photograph the nutrition panel and serving size.</p><div className="habit-food-actions">
       <button type="button" className="daily-button" disabled={busy} onClick={() => camera.current?.click()}><Camera aria-hidden="true" />Take photo</button>
       <button type="button" className="daily-button" disabled={busy} onClick={() => input.current?.click()}><ImagePlus aria-hidden="true" />Choose photo</button>

@@ -64,7 +64,9 @@ The calendar and quick log require the password by default. Set `public_calendar
 
 ## Android widget (optional)
 
-Private logging includes **Repeat meal** above the note box and **Nutrition label** beside it. Repeating a meal reuses the same portion and macros without AI. Label photos offer camera/gallery selection, show the extracted values, and require an amount eaten before saving. Images are sent to OpenRouter and are not stored on your server. PHP GD is required for photo processing.
+Private logging includes **Repeat meal** above the note box and **Nutrition label** beside it. Save foods you want to repeat after a note is processed, or search past logs to add them. The repeat menu shows your most logged saved foods and has search. Enter a fresh amount each time; grams or pieces default from previous logs. Known portions scale without AI. Egg salad and chaat can use separate egg counts and salad weights; setting up that ingredient split uses OpenRouter once and asks you to check the reference amounts.
+
+Label photos offer camera/gallery selection, show the extracted values, and require an amount eaten before saving. Images are sent to OpenRouter and are not stored on your server. PHP GD is required for photo processing.
 
 The Workout tab, native exercise editor, and taller widget show progression cues based on completed sets. Cues never overwrite your prefilled weights or treat a planned workout as completed.
 

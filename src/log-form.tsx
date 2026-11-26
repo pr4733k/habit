@@ -1,6 +1,7 @@
 'use client';
 
 import { FoodTools } from './food-tools';
+import { AddRepeatFoods } from './repeat-foods';
 import { Camera } from 'lucide-react';
 
 import { Check, Clock3, RefreshCw } from 'lucide-react';
@@ -215,6 +216,7 @@ export function LogForm({ timeZone, autoSync, processor }: { timeZone: string; a
       </p>}
       {syncError && <p className="daily-error" role="alert">{syncError}</p>}
     </form>
+    <AddRepeatFoods note={saved ? dayNotes.find(note => note.id === saved.id) ?? saved : null} />
     {notesError && <p className="daily-error" role="alert">{notesError}</p>}
     {dayNotes.length > 0 && <details className="daily-owner-section">
       <summary className="section-label">Saved notes ({dayNotes.length})</summary>
@@ -228,6 +230,7 @@ export function LogForm({ timeZone, autoSync, processor }: { timeZone: string; a
           {!note.parsed && note.processing?.state === 'failed' && <button className="text-link daily-retry" disabled={busy} onClick={() => retry(note)}>Retry</button>}
         </div>
         {note.processing?.error && !note.parsed && <p className="daily-muted">{note.processing.error}</p>}
+        <AddRepeatFoods note={note} />
         {note.parsed?.review && <p className="daily-muted">{note.parsed.review}</p>}
       </li>)}</ul>
     </details>}

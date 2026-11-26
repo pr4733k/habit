@@ -1,4 +1,20 @@
 .habit-food-tools { margin: 0 0 1.5rem; }
+.habit-repeat-panel { margin-top: 0.75rem; }
+.habit-repeat-panel > input[type="search"] { margin-bottom: 0.75rem; }
+.habit-repeat-panel input,.habit-repeat-panel select,.habit-repeat-editor input,.habit-repeat-editor select { width: 100%; min-width: 0; border: 1px solid var(--rule,#ddd); border-radius: 0.5rem; padding: 0.65rem; font: inherit; font-size: 1rem; color: inherit; background: transparent; box-sizing: border-box; min-height: 44px; }
+.habit-repeat-panel > .daily-muted { font-size: 0.75rem; }
+.habit-repeat-editor { border: 1px solid var(--rule,#eee); border-radius: 0.75rem; padding: 1rem; margin: 0.75rem 0; }
+.habit-repeat-editor > strong { display: block; font-weight: 500; margin-bottom: 0.875rem; }
+.habit-repeat-editor label { display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.8125rem; margin-bottom: 0.75rem; }
+.habit-repeat-editor details { font-size: 0.8125rem; margin-bottom: 1rem; }.habit-repeat-editor summary { cursor: pointer; margin-bottom: 0.75rem; }
+.habit-repeat-inputs { display: grid; grid-template-columns: minmax(0,2fr) minmax(5rem,1fr); gap: 0.625rem; }
+.habit-repeat-ingredient { font-size: 0.8125rem; font-weight: 500; margin-top: 0.875rem; }
+.habit-repeat-remove { margin-top: 1rem; font-size: 0.75rem; color: var(--muted,#666); }
+.habit-repeat-reference { border-top: 1px solid var(--rule,#eee); padding-top: 0.75rem; margin-top: 0.75rem; }
+.habit-repeat-reference > strong { display: block; font-size: 0.8125rem; font-weight: 500; margin-bottom: 0.75rem; }
+.habit-save-repeat { margin: 0.875rem 0 1.5rem; font-size: 0.8125rem; }.habit-save-repeat > .daily-muted { display: block; font-size: 0.75rem; margin-bottom: 0.5rem; }
+.habit-save-repeat .habit-food-actions { gap: 0.5rem 1rem; }.habit-save-repeat .habit-food-actions > button { min-height: 36px; }
+.habit-repeat-panel > .text-link { display: inline-block; margin-top: 0.75rem; min-height: 36px; }
 .habit-label-corrections { font-size: 0.75rem; margin: 0 0 1rem; }.habit-label-corrections summary { cursor: pointer; margin-bottom: 0.75rem; color: var(--muted,#666); }
 .habit-photo-options { border: 1px dashed var(--rule,#ddd); border-radius: 0.75rem; padding: 0.875rem; margin-top: 0.75rem; }
 .habit-photo-options p { font-size: 0.8125rem; margin-bottom: 0.75rem; }

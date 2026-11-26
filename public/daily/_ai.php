@@ -123,6 +123,7 @@ function dailyScaleNutrition(array $result, array $references): array {
                 if ($nutrition[$nutrient] !== null) $nutrition[$nutrient] = round($nutrition[$nutrient] * $consumed / $amount, 1);
             }
             $result[$key][$i]['nutrition'] = $nutrition;
+            $result[$key][$i]['portion'] = ['amount'=>$consumed,'unit'=>$basis['unit']];
         }
     }
     foreach ($result['recovery'] ?? [] as $i => $observation) {

@@ -8,6 +8,7 @@ require_once __DIR__ . '/_ai.php';
 require_once __DIR__ . '/_workout-plan.php';
 require_once __DIR__ . '/_exercise-log.php';
 require_once __DIR__ . '/_food-tools.php';
+require_once __DIR__ . '/_repeat-foods.php';
 
 try {
     $configPath = PHP_SAPI === 'cli-server' ? '/.daily-data/config.php' : '/daily-config.php';
@@ -46,6 +47,21 @@ try {
         respond(['error' => 'Hosted processing is enabled. The external bridge is disabled.'], 409);
     }
     switch ($method . ' ' . $action) {
+        case 'GET saved-foods':
+            respond(['foods'=>dailySavedFoods($db)]);
+        case 'GET repeat-food-candidates':
+            if(!is_string($_GET['query']??''))throw new DailyInput('Enter a food name.');
+            respond(['foods'=>dailyRepeatCandidates($db,$_GET['query']??'')]);
+        case 'POST prepare-repeat-food':
+            if(session_status()===PHP_SESSION_ACTIVE)session_write_close();
+            respond(['draft'=>dailyPrepareRepeat($db,$config,body())]);
+        case 'POST save-repeat-food':
+            respond(['food'=>dailySaveRepeat($db,body())]);
+        case 'POST log-repeat-food':
+            respond(['note'=>dailyLogSavedFood($db,body(),$today)]);
+        case 'POST remove-repeat-food':
+            dailySavedFoodsSchema($db);run($db,'DELETE FROM daily_saved_foods WHERE id=?',[noteId(body()['id']??null)]);
+            respond(['removed'=>true]);
         case 'GET repeat-meals':
             respond(['meals'=>dailyRepeatMeals($db)]);
         case 'POST repeat-meal':
