@@ -18,4 +18,6 @@ return [
     'training_goals' => [],
     // Optional private JSON file containing your confirmed food references.
     // 'food_reference_file' => '/absolute/private/path/food-reference.json',
+    // Optional Garmin Personal API key, stored outside your public website directory.
+    // 'garmin_key_file' => '/absolute/private/path/daily-garmin-key.txt',
 ];

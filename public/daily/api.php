@@ -9,6 +9,7 @@ require_once __DIR__ . '/_workout-plan.php';
 require_once __DIR__ . '/_exercise-log.php';
 require_once __DIR__ . '/_food-tools.php';
 require_once __DIR__ . '/_repeat-foods.php';
+require_once __DIR__ . '/_garmin.php';
 
 try {
     $configPath = PHP_SAPI === 'cli-server' ? '/.daily-data/config.php' : '/daily-config.php';
@@ -47,6 +48,11 @@ try {
         respond(['error' => 'Hosted processing is enabled. The external bridge is disabled.'], 409);
     }
     switch ($method . ' ' . $action) {
+        case 'GET garmin':
+            respond(['configured'=>dailyGarminConfigured($config)]);
+        case 'POST garmin-sync':
+            if(session_status()===PHP_SESSION_ACTIVE)session_write_close();
+            respond(dailyGarminSync($db,$config,$today));
         case 'GET saved-foods':
             respond(['foods'=>dailySavedFoods($db)]);
         case 'GET repeat-food-candidates':
@@ -241,6 +247,8 @@ try {
 } catch (DailyExerciseConflict $error) {
     respond(['error' => $error->getMessage()], 409);
 } catch (DailyAiFailure $error) {
+    respond(['error' => $error->getMessage()], 503);
+} catch (DailyGarminFailure $error) {
     respond(['error' => $error->getMessage()], 503);
 } catch (DailyInput | JsonException $error) {
     respond(['error' => $error instanceof DailyInput ? $error->getMessage() : 'Invalid JSON.'], 400);

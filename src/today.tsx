@@ -4,6 +4,7 @@ import { LoaderCircle } from 'lucide-react';
 import { useEffect, useState, type FormEvent } from 'react';
 import { api, formatNumber, type Workout } from './model';
 import { WorkoutSession } from './workout-session';
+import { GarminSync } from './garmin-sync';
 import { readSessionDraft, sessionStorageKey } from './workout-log-model';
 import './today.css';
 
@@ -91,6 +92,7 @@ export function WorkoutPlanner({ active, workouts, onLoggingChange }: { active: 
     <div className="habit-plan-heading"><h2 id="habit-plan-heading" className="section-label">/plan</h2>
       {canGenerate && <span className="daily-muted">All inputs optional</span>}
     </div>
+    {canLog && <GarminSync />}
     {error && <p className="daily-error" role="alert">{error}</p>}
     {canGenerate && <form className="habit-plan-form" onSubmit={generate}>
       <div className="habit-plan-inputs">{fields.map(field => <label key={field.key} htmlFor={`habit-plan-${field.key}`}>

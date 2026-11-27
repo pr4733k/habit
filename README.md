@@ -68,6 +68,8 @@ Private logging includes **Repeat meal** above the note box and **Nutrition labe
 
 Label photos offer camera/gallery selection, show the extracted values, and require an amount eaten before saving. Images are sent to OpenRouter and are not stored on your server. PHP GD is required for photo processing.
 
+You can also enable **Sync Garmin run** on the private log page and Workout tab. It imports recent runs through Garmin's Personal API without AI or background polling. Repeated syncs match activities by Garmin ID. See [Garmin setup](daily/garmin.md).
+
 The Workout tab, native exercise editor, and taller widget show progression cues based on completed sets. Cues never overwrite your prefilled weights or treat a planned workout as completed.
 
 The app opens your Habit website with its calendar, Workout tab, and daily logs. The widget shows macros, water, and an exercise queue when resized taller. Log the displayed previous sets in one tap, or edit weights, reps, and set groups in a native popup. Each exercise saves separately. Pending exercise saves stay on the phone and retry when connected.

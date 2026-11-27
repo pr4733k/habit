@@ -2,6 +2,7 @@
 
 import { FoodTools } from './food-tools';
 import { AddRepeatFoods } from './repeat-foods';
+import { GarminSync } from './garmin-sync';
 import { Camera } from 'lucide-react';
 
 import { Check, Clock3, RefreshCw } from 'lucide-react';
@@ -190,6 +191,7 @@ export function LogForm({ timeZone, autoSync, processor }: { timeZone: string; a
           : <time dateTime={date}>{dateLabel(date, { weekday: 'short', day: 'numeric', month: 'long' })}</time>}
       </div>
     </div>
+    {!editing && <GarminSync />}
     {!editing && <FoodTools key={date} date={date} onSaved={setSaved} photoRequest={photoRequest} />}
     <form className="daily-log-form" onSubmit={save}>
       <div className="daily-note-heading"><label className="section-label" htmlFor="daily-note">/note</label>{!editing && <button type="button" className="text-link daily-retry" onClick={() => { setPhotoRequest(value => value + 1); document.querySelector('[aria-label="Quick food logging"]')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }}><Camera aria-hidden="true" />Nutrition label</button>}</div>
